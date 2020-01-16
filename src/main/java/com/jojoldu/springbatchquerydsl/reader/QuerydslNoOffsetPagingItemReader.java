@@ -10,7 +10,7 @@ import java.util.function.Function;
 
 public class QuerydslNoOffsetPagingItemReader<T extends BaseEntityId> extends QuerydslPagingItemReader<T> {
 
-    private long currentId = 0;
+    private Long currentId = 0L;
     private QuerydslNoOffsetOptions options;
 
     private QuerydslNoOffsetPagingItemReader() {
@@ -45,11 +45,16 @@ public class QuerydslNoOffsetPagingItemReader<T extends BaseEntityId> extends Qu
     protected JPAQuery<T> createQuery() {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
         if(getPage() == 0) {
-            currentId = queryFunction.apply(queryFactory).select(options.selectFirstId()).fetchOne();
+            this.currentId = queryFunction.apply(queryFactory).select(options.selectFirstId()).fetchOne();
             if (logger.isDebugEnabled()) {
-                logger.debug("First Current Id " + currentId);
+                logger.debug("First Current Id " + this.currentId);
             }
         }
+
+        if(this.currentId == null) {
+            return queryFunction.apply(queryFactory);
+        }
+
         return queryFunction.apply(queryFactory)
                 .where(options.whereExpression(currentId))
                 .orderBy(options.orderExpression());

@@ -64,6 +64,26 @@ public class QuerydslNoOffsetPagingItemReaderTest {
     }
 
     @Test
+    public void 쿼리생성후_select_오버라이딩_확인() {
+        //given
+        LocalDate startDate = LocalDate.of(2020,1,11);
+        LocalDate endDate = LocalDate.of(2020,1,11);
+        JPAQuery<Product> query = queryFactory
+                .selectFrom(product)
+                .where(product.createDate.between(startDate, endDate))
+                .orderBy(product.createDate.asc());
+
+        NumberPath<Long> id = product.id;
+
+        //when
+        query.select(id.max().add(1));
+
+        //then
+        assertThat(query.toString()).contains("select max(product.id)");
+    }
+
+
+    @Test
     public void reader가_정상적으로_값을반환한다() throws Exception {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);
@@ -94,4 +114,56 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         assertThat(read3).isNull();
     }
 
+    @Test
+    public void 빈값일경우_null이_read된다() throws Exception {
+        //given
+        LocalDate txDate = LocalDate.of(2020,10,12);
+
+        QuerydslNoOffsetOptions options = new QuerydslNoOffsetOptions(product.id, Expression.ASC);
+
+        int chunkSize = 1;
+
+        QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                .selectFrom(product)
+                .where(product.createDate.eq(txDate)));
+
+        reader.open(new ExecutionContext());
+
+        //when
+        Product read1 = reader.read();
+
+        //then
+        assertThat(read1).isNull();
+    }
+
+    @Test
+    public void reader가_역순으로_값을반환한다() throws Exception {
+        //given
+        LocalDate txDate = LocalDate.of(2020,10,12);
+        String name = "a";
+        int expected1 = 1000;
+        int expected2 = 2000;
+        productRepository.save(new Product(name, expected1, txDate));
+        productRepository.save(new Product(name, expected2, txDate));
+
+        QuerydslNoOffsetOptions options = new QuerydslNoOffsetOptions(product.id, Expression.DESC);
+
+        int chunkSize = 1;
+
+        QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                .selectFrom(product)
+                .where(product.createDate.eq(txDate)));
+
+        reader.open(new ExecutionContext());
+
+        //when
+        Product read1 = reader.read();
+        Product read2 = reader.read();
+        Product read3 = reader.read();
+
+        //then
+        assertThat(read1.getPrice()).isEqualTo(2000L);
+        assertThat(read2.getPrice()).isEqualTo(1000L);
+        assertThat(read3).isNull();
+    }
 }
