@@ -2,25 +2,30 @@ package com.jojoldu.springbatchquerydsl.reader;
 
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.core.types.dsl.NumberPath;
+
+import javax.annotation.Nonnull;
 
 public class QuerydslNoOffsetOptions {
     private final NumberPath<Long> id;
-    private final WhereExpression where;
-    private final OrderExpression order;
+    private final Expression expression;
 
-    public QuerydslNoOffsetOptions(NumberPath<Long> id, Expression expression) {
+    public QuerydslNoOffsetOptions(@Nonnull NumberPath<Long> id, @Nonnull Expression expression) {
         this.id = id;
-        this.where = expression.where;
-        this.order = expression.order;
+        this.expression = expression;
     }
 
-    public BooleanExpression whereExpression(Long compare, int page) {
-        if(compare == null || page == 0) {
-            return null;
+    public NumberExpression<Long> selectFirstId() {
+        if (expression.isAsc()) {
+            return id.min().add(-1);
         }
 
-        if(where.isGt()) {
+        return id.max().add(1);
+    }
+
+    public BooleanExpression whereExpression(Long compare) {
+        if (expression.isAsc()) {
             return id.gt(compare);
         }
 
@@ -28,16 +33,20 @@ public class QuerydslNoOffsetOptions {
     }
 
     public OrderSpecifier<Long> orderExpression() {
-        if(order.isAsc()) {
+        if (expression.isAsc()) {
             return id.asc();
         }
 
         return id.desc();
     }
 
+    public NumberPath<Long> getId() {
+        return id;
+    }
+
     public enum Expression {
-        ASC (WhereExpression.GT, OrderExpression.ASC),
-        DESC (WhereExpression.LT, OrderExpression.DESC);
+        ASC(WhereExpression.GT, OrderExpression.ASC),
+        DESC(WhereExpression.LT, OrderExpression.DESC);
 
         private final WhereExpression where;
         private final OrderExpression order;
@@ -46,21 +55,19 @@ public class QuerydslNoOffsetOptions {
             this.where = where;
             this.order = order;
         }
+
+        public boolean isAsc() {
+            return this == ASC;
+        }
     }
 
     public enum WhereExpression {
         GT, LT;
 
-        public boolean isGt() {
-            return this == GT;
-        }
     }
 
     public enum OrderExpression {
         ASC, DESC;
 
-        public boolean isAsc() {
-            return this == ASC;
-        }
     }
 }

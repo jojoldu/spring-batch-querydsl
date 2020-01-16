@@ -44,9 +44,14 @@ public class QuerydslNoOffsetPagingItemReader<T extends BaseEntityId> extends Qu
     @Override
     protected JPAQuery<T> createQuery() {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
-
+        if(getPage() == 0) {
+            currentId = queryFunction.apply(queryFactory).select(options.selectFirstId()).fetchOne();
+            if (logger.isDebugEnabled()) {
+                logger.debug("First Current Id " + currentId);
+            }
+        }
         return queryFunction.apply(queryFactory)
-                .where(options.whereExpression(currentId, getPage()))
+                .where(options.whereExpression(currentId))
                 .orderBy(options.orderExpression());
     }
 
