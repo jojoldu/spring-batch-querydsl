@@ -3,6 +3,7 @@ package com.jojoldu.springbatchquerydsl.reader;
 import com.jojoldu.springbatchquerydsl.TestBatchConfig;
 import com.jojoldu.springbatchquerydsl.entity.Product;
 import com.jojoldu.springbatchquerydsl.entity.ProductRepository;
+import com.jojoldu.springbatchquerydsl.job.QuerydslNoOffsetPagingItemReaderConfiguration;
 import com.jojoldu.springbatchquerydsl.reader.QuerydslNoOffsetOptions.Expression;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -24,7 +25,7 @@ import static com.jojoldu.springbatchquerydsl.entity.QProduct.product;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = TestBatchConfig.class)
+@SpringBootTest(classes = {TestBatchConfig.class, QuerydslNoOffsetPagingItemReaderConfiguration.class})
 public class QuerydslNoOffsetPagingItemReaderTest {
 
     @Autowired

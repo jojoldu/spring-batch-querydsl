@@ -3,6 +3,7 @@ package com.jojoldu.springbatchquerydsl.reader;
 import com.jojoldu.springbatchquerydsl.TestBatchConfig;
 import com.jojoldu.springbatchquerydsl.entity.Product;
 import com.jojoldu.springbatchquerydsl.entity.ProductRepository;
+import com.jojoldu.springbatchquerydsl.job.QuerydslPagingItemReaderConfiguration;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.junit.After;
 import org.junit.Test;
@@ -24,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Github : http://github.com/jojoldu
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = {TestBatchConfig.class})
+@SpringBootTest(classes = {TestBatchConfig.class, QuerydslPagingItemReaderConfiguration.class})
 public class QuerydslPagingItemReaderTest {
 
     @Autowired

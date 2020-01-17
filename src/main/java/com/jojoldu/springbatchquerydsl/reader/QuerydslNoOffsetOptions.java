@@ -40,10 +40,6 @@ public class QuerydslNoOffsetOptions {
         return id.desc();
     }
 
-    public NumberPath<Long> getId() {
-        return id;
-    }
-
     public enum Expression {
         ASC(WhereExpression.GT, OrderExpression.ASC),
         DESC(WhereExpression.LT, OrderExpression.DESC);
@@ -63,11 +59,9 @@ public class QuerydslNoOffsetOptions {
 
     public enum WhereExpression {
         GT, LT;
-
     }
 
     public enum OrderExpression {
         ASC, DESC;
-
     }
 }
