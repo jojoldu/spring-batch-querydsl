@@ -68,5 +68,4 @@ public class QuerydslNoOffsetPagingItemReader<T extends BaseEntityId> extends Qu
             }
         }
     }
-
 }
