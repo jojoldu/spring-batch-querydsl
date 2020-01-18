@@ -38,7 +38,7 @@ public class QuerydslNoOffsetPagingItemReaderTest {
     private EntityManagerFactory emf;
 
     @After
-    public void tearDown() throws Exception {
+    public void after() throws Exception {
         productRepository.deleteAll();
     }
 
