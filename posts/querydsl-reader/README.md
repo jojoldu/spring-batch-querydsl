@@ -81,13 +81,13 @@ public class ProductBatchRepository extends QuerydslRepositorySupport {
 
 이런 코드를 **매 Batch Job마다 작성**해야만 했습니다.  
   
-**중요한 Querydsl의 쿼리 작성보다 행사코드가 더 많은 일**이 발생한 것이죠.  
+중요한 Querydsl의 쿼리 작성보다 **행사코드가 더 많은 일**이 발생한 것이죠.  
 행사코드가 많다는 말은, 다른 의미로 불편함을 의미하기도 합니다.  
 SpringBatch와 Querydsl 자체가 처음이신분들께는 이런 ItemReader를 만드는 과정을 설명하는 것이 허들이였기 때문입니다.  
   
 결과적으로 JpaPagingItemReader, HibernatePagingItemReader에 비해 위 방식은 **사용성이 너무 떨어진다**고 생각하게 되었습니다.  
 
-> 물론 Querdsl을 포기하고 JpaPagingItemReader를 이용해도 됩니다만, 그렇게 되면 Querydsl의 **자동완성, 컴파일 단계 문법체크, 공백이슈**를 지원받을 수가 없습니다.  
+> 물론 Querdsl을 포기하고 JpaPagingItemReader를 이용해도 됩니다만, 그렇게 되면 Querydsl의 **타입 안정성, 자동완성, 컴파일 단계 문법체크, 공백이슈**를 지원받을 수가 없습니다.  
 > 100개가 넘는 테이블, 수십개의 배치를 개발/운영하는 입장에서 이걸 포기할 순 없었습니다.
   
 그래서 Spring Batch의 ItemReader를 생성할때 **Querydsl의 쿼리에만 집중**할 수 있도록 QuerydslPagingItemReader를 개발하게 되었습니다.  
@@ -106,11 +106,13 @@ SpringBatch와 Querydsl 자체가 처음이신분들께는 이런 ItemReader를 
 
 ## 1. QuerydslPagingItemReader
 
-QuerydslPagingItemReader의 컨셉은 **JpaPagingItemReader에서 쿼리가 수행되는 부분만 교체**하는 것 입니다.  
-
-
-
-
+Querydsl이 결과적으로 JPQL을 안전하게 표현할 수 있다는 점을 고려해본다면 QuerydslPagingItemReader의 컨셉은 단순합니다.  
+  
+**JpaPagingItemReader에서 JPQL이 수행되는 부분만 교체**하는 것 입니다.  
+  
+그렇다면 JpaPagingItemReader에서 JPQL이 수행되는 부분은 어디일까요?  
+Spring Batch의 구조를 보면서 확인해보겠습니다.  
+  
 기본적으로 Spring Batch 의 Chunk 지향 구조 (reader/processor/writer) 는 아래와 같습니다.
 
 ![chunk](./images/chunk.png)
@@ -121,11 +123,106 @@ QuerydslPagingItemReader의 컨셉은 **JpaPagingItemReader에서 쿼리가 수�
   * ```doReadpage()``` 로 가져온 데이터들을 **하나씩 processor로 전달**합니다.
   * 만약 ```doReadpage()```로 가져온 데이터를 모두 processor에 전달했다면, **다음 페이지 데이터들을 가져오도록** ```doReadPage()```를 호출합니다.
 
+여기서 **JPQL이 실행되는 부분**은 ```doReadPage()``` 입니다.  
+즉, ```doReadPage()``` 에서 쿼리가 수행되는 부분은 Querydsl의 쿼리로 변경하면 되는것이죠.  
 
-여기서 실제로 **Querydsl의 쿼리가 실행되는 부분**은 ```doReadPage``` 입니다.  
+![doReadPage](./images/doReadPage.png)
 
+![createQuery](./images/createQuery.png)
 
+```java
+public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
 
+    protected final Map<String, Object> jpaPropertyMap = new HashMap<>();
+    protected EntityManagerFactory entityManagerFactory;
+    protected EntityManager entityManager;
+    protected Function<JPAQueryFactory, JPAQuery<T>> queryFunction;
+    protected boolean transacted = true;//default value
+
+    protected QuerydslPagingItemReader() {
+        setName(ClassUtils.getShortName(QuerydslPagingItemReader.class));
+    }
+
+    public QuerydslPagingItemReader(EntityManagerFactory entityManagerFactory, int pageSize, Function<JPAQueryFactory, JPAQuery<T>> queryFunction) {
+        this();
+        this.entityManagerFactory = entityManagerFactory;
+        this.queryFunction = queryFunction;
+        setPageSize(pageSize);
+    }
+
+    public void setTransacted(boolean transacted) {
+        this.transacted = transacted;
+    }
+
+    @Override
+    protected void doOpen() throws Exception {
+        super.doOpen();
+
+        entityManager = entityManagerFactory.createEntityManager(jpaPropertyMap);
+        if (entityManager == null) {
+            throw new DataAccessResourceFailureException("Unable to obtain an EntityManager");
+        }
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    protected void doReadPage() {
+
+        clearIfTransacted();
+
+        JPAQuery<T> query = createQuery().offset(getPage() * getPageSize()).limit(getPageSize());
+
+        initResults();
+
+        fetchQuery(query);
+    }
+
+    protected void clearIfTransacted() {
+        if (transacted) {
+            entityManager.clear();
+        }
+    }
+
+    protected void initResults() {
+        if (CollectionUtils.isEmpty(results)) {
+            results = new CopyOnWriteArrayList<T>();
+        } else {
+            results.clear();
+        }
+    }
+
+    protected JPAQuery<T> createQuery() {
+        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
+        return queryFunction.apply(queryFactory);
+    }
+
+    protected void fetchQuery(JPAQuery<T> query) {
+        if (!transacted) {
+            List<T> queryResult = query.fetch();
+            for (T entity : queryResult) {
+                entityManager.detach(entity);
+                results.add(entity);
+            }
+        } else {
+            results.addAll(query.fetch());
+        }
+    }
+
+    @Override
+    protected void doJumpToPage(int itemIndex) {
+    }
+
+    @Override
+    protected void doClose() throws Exception {
+        entityManager.close();
+        super.doClose();
+    }
+}
+```
+
+코드를 보시면 기존의 ```createQuery``` 외에 ```doReadPage()```와 다른 부분이 있다는 것을 알 수 있으실텐데요.
+
+> 실제로 해당 이슈에 대해서는 Spring Batch 팀에 [PR](https://github.com/spring-projects/spring-batch/pull/713)을 보낸 상황입니다.
 
 
 ## 2. QuerydslNoOffsetPagingItemReader
