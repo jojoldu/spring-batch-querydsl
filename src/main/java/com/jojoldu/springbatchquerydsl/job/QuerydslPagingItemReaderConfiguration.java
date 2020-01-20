@@ -27,8 +27,8 @@ import static com.jojoldu.springbatchquerydsl.entity.QProduct.product;
  * Github : http://github.com/jojoldu
  */
 
-@Slf4j // log 사용을 위한 lombok 어노테이션
-@RequiredArgsConstructor // 생성자 DI를 위한 lombok 어노테이션
+@Slf4j
+@RequiredArgsConstructor
 @Configuration
 public class QuerydslPagingItemReaderConfiguration {
     public static final String JOB_NAME = "querydslPagingReaderJob";
@@ -85,6 +85,4 @@ public class QuerydslPagingItemReaderConfiguration {
                 .entityManagerFactory(emf)
                 .build();
     }
-
-
 }
