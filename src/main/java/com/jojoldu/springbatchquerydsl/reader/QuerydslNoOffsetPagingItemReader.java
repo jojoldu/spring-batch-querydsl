@@ -18,7 +18,10 @@ public class QuerydslNoOffsetPagingItemReader<T extends BaseEntityId> extends Qu
         setName(ClassUtils.getShortName(QuerydslNoOffsetPagingItemReader.class));
     }
 
-    public QuerydslNoOffsetPagingItemReader(EntityManagerFactory entityManagerFactory, int pageSize, QuerydslNoOffsetOptions options, Function<JPAQueryFactory, JPAQuery<T>> queryFunction) {
+    public QuerydslNoOffsetPagingItemReader(EntityManagerFactory entityManagerFactory,
+                                            int pageSize,
+                                            QuerydslNoOffsetOptions options,
+                                            Function<JPAQueryFactory, JPAQuery<T>> queryFunction) {
         this();
         super.entityManagerFactory = entityManagerFactory;
         super.queryFunction = queryFunction;
@@ -44,12 +47,8 @@ public class QuerydslNoOffsetPagingItemReader<T extends BaseEntityId> extends Qu
     @Override
     protected JPAQuery<T> createQuery() {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
-        if(getPage() == 0) {
-            this.currentId = queryFunction.apply(queryFactory).select(options.selectFirstId()).fetchOne();
-            if (logger.isDebugEnabled()) {
-                logger.debug("First Current Id " + this.currentId);
-            }
-        }
+
+        initIdIfFirstPage(queryFactory);
 
         if(this.currentId == null) {
             return queryFunction.apply(queryFactory);
@@ -60,9 +59,22 @@ public class QuerydslNoOffsetPagingItemReader<T extends BaseEntityId> extends Qu
                 .orderBy(options.orderExpression());
     }
 
+    private void initIdIfFirstPage(JPAQueryFactory queryFactory) {
+        if(getPage() == 0) {
+            this.currentId = queryFunction.apply(queryFactory)
+                    .select(options.selectFirstId())
+                    .fetchOne();
+
+            if (logger.isDebugEnabled()) {
+                logger.debug("First Current Id " + this.currentId);
+            }
+        }
+    }
+
     private void resetCurrentId() {
         if (!CollectionUtils.isEmpty(results)) {
             currentId = results.get(results.size() - 1).getId();
+
             if (logger.isDebugEnabled()) {
                 logger.debug("Current Id " + currentId);
             }

@@ -27,7 +27,9 @@ public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
         setName(ClassUtils.getShortName(QuerydslPagingItemReader.class));
     }
 
-    public QuerydslPagingItemReader(EntityManagerFactory entityManagerFactory, int pageSize, Function<JPAQueryFactory, JPAQuery<T>> queryFunction) {
+    public QuerydslPagingItemReader(EntityManagerFactory entityManagerFactory,
+                                    int pageSize,
+                                    Function<JPAQueryFactory, JPAQuery<T>> queryFunction) {
         this();
         this.entityManagerFactory = entityManagerFactory;
         this.queryFunction = queryFunction;
@@ -54,7 +56,9 @@ public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
 
         clearIfTransacted();
 
-        JPAQuery<T> query = createQuery().offset(getPage() * getPageSize()).limit(getPageSize());
+        JPAQuery<T> query = createQuery()
+                .offset(getPage() * getPageSize())
+                .limit(getPageSize());
 
         initResults();
 
@@ -67,17 +71,17 @@ public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
         }
     }
 
+    protected JPAQuery<T> createQuery() {
+        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
+        return queryFunction.apply(queryFactory);
+    }
+
     protected void initResults() {
         if (CollectionUtils.isEmpty(results)) {
             results = new CopyOnWriteArrayList<T>();
         } else {
             results.clear();
         }
-    }
-
-    protected JPAQuery<T> createQuery() {
-        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
-        return queryFunction.apply(queryFactory);
     }
 
     protected void fetchQuery(JPAQuery<T> query) {
