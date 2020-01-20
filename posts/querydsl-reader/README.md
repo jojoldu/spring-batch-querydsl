@@ -124,11 +124,17 @@ Spring Batch의 구조를 보면서 확인해보겠습니다.
   * 만약 ```doReadpage()```로 가져온 데이터를 모두 processor에 전달했다면, **다음 페이지 데이터들을 가져오도록** ```doReadPage()```를 호출합니다.
 
 여기서 **JPQL이 실행되는 부분**은 ```doReadPage()``` 입니다.  
-즉, ```doReadPage()``` 에서 쿼리가 수행되는 부분은 Querydsl의 쿼리로 변경하면 되는것이죠.  
+즉, ```doReadPage()``` 에서 쿼리가 수행되는 부분을 Querydsl의 쿼리로 변경하면 되는것이죠.  
 
 ![doReadPage](./images/doReadPage.png)
 
+보시는것처럼 ```createQuery()```가 별도로 있어 그 부분만 override 하면 될 것 같지만, ```private``` 메소드라서 불가능합니다.
+
 ![createQuery](./images/createQuery.png)
+
+단순하게 JpaPagingItemReader를 상속하여 ```createQuery()```만 override를 할 수 없다는 것을 알게되었으니 **JpaPagingItemReader의 전체 코드를 복사**하여 생성하겠습니다.  
+  
+아래가 QuerydslPagingItemReader의 전체 코드입니다.
 
 ```java
 public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
@@ -224,11 +230,13 @@ public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
 
 > 실제로 해당 이슈에 대해서는 Spring Batch 팀에 [PR](https://github.com/spring-projects/spring-batch/pull/713)을 보낸 상황입니다.
 
+### 1-1. 테스트코드로 검증
+
+### 1-2. 사용 방법
 
 ## 2. QuerydslNoOffsetPagingItemReader
 
-
-이 글을 읽고 계신 많은 분들은 이미 다들 아시겠지만, MySQL 은 특성상 **페이징이 뒤로 갈수록 느려집니다**.  
+많은 분들이 이미 아시겠지만, MySQL 은 특성상 **페이징이 뒤로 갈수록 느려집니다**.  
   
 즉, 아래와 같은 형태의 쿼리는 **offset 값이 커질수록 느리다**는 의미입니다.
 
@@ -417,6 +425,9 @@ public class QuerydslNoOffsetOptions {
 }
 ```
 
+### 2-1. 테스트코드로 검증
+
+### 2-2. 사용 방법
 
 ## 3. QuerydslNoOffsetPagingItemReader 성능 비교
 
