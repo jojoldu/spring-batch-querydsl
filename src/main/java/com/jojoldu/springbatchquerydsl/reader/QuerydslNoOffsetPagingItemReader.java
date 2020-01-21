@@ -8,10 +8,9 @@ import org.springframework.util.CollectionUtils;
 import javax.persistence.EntityManagerFactory;
 import java.util.function.Function;
 
-public class QuerydslNoOffsetPagingItemReader<T extends BaseEntityId> extends QuerydslPagingItemReader<T> {
+public class QuerydslNoOffsetPagingItemReader<T, N extends Number & Comparable<?>> extends QuerydslPagingItemReader<T> {
 
-    private Long currentId = 0L;
-    private QuerydslNoOffsetOptions options;
+    private QuerydslNoOffsetNumberOptions<T, N> options;
 
     private QuerydslNoOffsetPagingItemReader() {
         super();
@@ -20,7 +19,7 @@ public class QuerydslNoOffsetPagingItemReader<T extends BaseEntityId> extends Qu
 
     public QuerydslNoOffsetPagingItemReader(EntityManagerFactory entityManagerFactory,
                                             int pageSize,
-                                            QuerydslNoOffsetOptions options,
+                                            QuerydslNoOffsetNumberOptions<T, N> options,
                                             Function<JPAQueryFactory, JPAQuery<T>> queryFunction) {
         this();
         super.entityManagerFactory = entityManagerFactory;
@@ -47,37 +46,29 @@ public class QuerydslNoOffsetPagingItemReader<T extends BaseEntityId> extends Qu
     @Override
     protected JPAQuery<T> createQuery() {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
+        JPAQuery<T> query = queryFunction.apply(queryFactory);
 
-        initIdIfFirstPage(queryFactory);
+        initIdIfFirstPage(query);
 
         if(this.currentId == null) {
-            return queryFunction.apply(queryFactory);
+            return query;
         }
 
-        return queryFunction.apply(queryFactory)
+        return query
                 .where(options.whereExpression(currentId))
                 .orderBy(options.orderExpression());
     }
 
-    private void initIdIfFirstPage(JPAQueryFactory queryFactory) {
+    private void initIdIfFirstPage(JPAQuery<T> query) {
         if(getPage() == 0) {
-            this.currentId = queryFunction.apply(queryFactory)
-                    .select(options.selectFirstId())
-                    .fetchOne();
-
-            if (logger.isDebugEnabled()) {
-                logger.debug("First Current Id " + this.currentId);
-            }
+            options.setFirstId(query);
         }
     }
 
     private void resetCurrentId() {
         if (!CollectionUtils.isEmpty(results)) {
-            currentId = results.get(results.size() - 1).getId();
-
-            if (logger.isDebugEnabled()) {
-                logger.debug("Current Id " + currentId);
-            }
+            T lastItem = results.get(results.size() - 1);
+            options.resetCurrentId(lastItem);
         }
     }
 }

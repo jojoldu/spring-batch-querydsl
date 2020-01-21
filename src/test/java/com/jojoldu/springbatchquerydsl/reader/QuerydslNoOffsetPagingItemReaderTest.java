@@ -4,7 +4,7 @@ import com.jojoldu.springbatchquerydsl.TestBatchConfig;
 import com.jojoldu.springbatchquerydsl.entity.Product;
 import com.jojoldu.springbatchquerydsl.entity.ProductRepository;
 import com.jojoldu.springbatchquerydsl.job.QuerydslNoOffsetPagingItemReaderConfiguration;
-import com.jojoldu.springbatchquerydsl.reader.QuerydslNoOffsetOptions.Expression;
+import com.jojoldu.springbatchquerydsl.reader.QuerydslNoOffsetNumberOptions.Expression;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.NumberPath;
@@ -94,7 +94,7 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         productRepository.save(new Product(name, expected1, txDate));
         productRepository.save(new Product(name, expected2, txDate));
 
-        QuerydslNoOffsetOptions options = new QuerydslNoOffsetOptions(product.id, Expression.ASC);
+        QuerydslNoOffsetNumberOptions options = new QuerydslNoOffsetNumberOptions(product.id, Expression.ASC);
 
         int chunkSize = 1;
 
@@ -120,7 +120,7 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);
 
-        QuerydslNoOffsetOptions options = new QuerydslNoOffsetOptions(product.id, Expression.ASC);
+        QuerydslNoOffsetNumberOptions options = new QuerydslNoOffsetNumberOptions(product.id, Expression.ASC);
 
         int chunkSize = 1;
 
@@ -147,7 +147,7 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         productRepository.save(new Product(name, expected1, txDate));
         productRepository.save(new Product(name, expected2, txDate));
 
-        QuerydslNoOffsetOptions options = new QuerydslNoOffsetOptions(product.id, Expression.DESC);
+        QuerydslNoOffsetNumberOptions options = new QuerydslNoOffsetNumberOptions(product.id, Expression.DESC);
 
         int chunkSize = 1;
 
