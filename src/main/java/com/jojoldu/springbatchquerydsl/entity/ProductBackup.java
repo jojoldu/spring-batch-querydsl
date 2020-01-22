@@ -29,6 +29,7 @@ public class ProductBackup implements BaseEntityId {
 
     private String name;
     private long price;
+    private int categoryNo;
     private LocalDate createDate;
 
 
@@ -37,6 +38,7 @@ public class ProductBackup implements BaseEntityId {
         this.originId = product.getId();
         this.name = product.getName();
         this.price = product.getPrice();
+        this.categoryNo = product.getCategoryNo();
         this.createDate = product.getCreateDate();
     }
 }

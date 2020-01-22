@@ -47,26 +47,20 @@ public class QuerydslNoOffsetPagingItemReader<T, N extends Number & Comparable<?
     protected JPAQuery<T> createQuery() {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
         JPAQuery<T> query = queryFunction.apply(queryFactory);
+        options.setQuery(query);
+        initIdIfFirstPage();
 
-        initIdIfFirstPage(query);
-
-        if(this.currentId == null) {
-            return query;
-        }
-
-        return query
-                .where(options.whereExpression(currentId))
-                .orderBy(options.orderExpression());
+        return options.createQuery();
     }
 
-    private void initIdIfFirstPage(JPAQuery<T> query) {
+    private void initIdIfFirstPage() {
         if(getPage() == 0) {
-            options.setFirstId(query);
+            options.initFirstId();
         }
     }
 
     private void resetCurrentId() {
-        if (!CollectionUtils.isEmpty(results)) {
+        if (!CollectionUtils.isEmpty(results) && results.get(0) != null) { // 조회결과가 Empty이면 results에 null이 담긴다
             T lastItem = results.get(results.size() - 1);
             options.resetCurrentId(lastItem);
         }

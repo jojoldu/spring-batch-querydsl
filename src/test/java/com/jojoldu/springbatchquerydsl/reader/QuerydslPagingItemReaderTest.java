@@ -4,7 +4,6 @@ import com.jojoldu.springbatchquerydsl.TestBatchConfig;
 import com.jojoldu.springbatchquerydsl.entity.Product;
 import com.jojoldu.springbatchquerydsl.entity.ProductRepository;
 import com.jojoldu.springbatchquerydsl.job.QuerydslPagingItemReaderConfiguration;
-import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -44,10 +43,11 @@ public class QuerydslPagingItemReaderTest {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);
         String name = "a";
+        int categoryNo = 1;
         int expected1 = 1000;
         int expected2 = 2000;
-        productRepository.save(new Product(name, expected1, txDate));
-        productRepository.save(new Product(name, expected2, txDate));
+        productRepository.save(new Product(name, expected1, categoryNo, txDate));
+        productRepository.save(new Product(name, expected2, categoryNo, txDate));
 
         int chunkSize = 1;
 

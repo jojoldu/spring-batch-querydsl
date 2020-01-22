@@ -89,16 +89,17 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);
         String name = "a";
+        int categoryNo = 1;
         int expected1 = 1000;
         int expected2 = 2000;
-        productRepository.save(new Product(name, expected1, txDate));
-        productRepository.save(new Product(name, expected2, txDate));
+        productRepository.save(new Product(name, expected1, categoryNo, txDate));
+        productRepository.save(new Product(name, expected2, categoryNo, txDate));
 
-        QuerydslNoOffsetNumberOptions options = new QuerydslNoOffsetNumberOptions(product.id, Expression.ASC);
+        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, "id", Expression.ASC);
 
         int chunkSize = 1;
 
-        QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+        QuerydslNoOffsetPagingItemReader<Product, Long> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
                         .selectFrom(product)
                         .where(product.createDate.eq(txDate)));
 
@@ -120,11 +121,11 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);
 
-        QuerydslNoOffsetNumberOptions options = new QuerydslNoOffsetNumberOptions(product.id, Expression.ASC);
+        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, "id", Expression.ASC);
 
         int chunkSize = 1;
 
-        QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+        QuerydslNoOffsetPagingItemReader<Product, Long> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
                 .selectFrom(product)
                 .where(product.createDate.eq(txDate)));
 
@@ -142,16 +143,17 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);
         String name = "a";
+        int categoryNo = 1;
         int expected1 = 1000;
         int expected2 = 2000;
-        productRepository.save(new Product(name, expected1, txDate));
-        productRepository.save(new Product(name, expected2, txDate));
+        productRepository.save(new Product(name, expected1, categoryNo, txDate));
+        productRepository.save(new Product(name, expected2, categoryNo, txDate));
 
-        QuerydslNoOffsetNumberOptions options = new QuerydslNoOffsetNumberOptions(product.id, Expression.DESC);
+        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, "id", Expression.DESC);
 
         int chunkSize = 1;
 
-        QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+        QuerydslNoOffsetPagingItemReader<Product, Long> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
                 .selectFrom(product)
                 .where(product.createDate.eq(txDate)));
 

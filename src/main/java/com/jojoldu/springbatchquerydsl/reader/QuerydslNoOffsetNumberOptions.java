@@ -15,6 +15,7 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
     protected Log logger = LogFactory.getLog(getClass());
 
     private N currentId;
+    private JPAQuery<T> query;
 
     private final NumberPath<N> id;
     private final String fieldName;
@@ -28,13 +29,17 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
         this.expression = expression;
     }
 
-    public void setFirstId(JPAQuery<T> query) {
-        this.currentId = query
+    public void setQuery(JPAQuery<T> query) {
+        this.query = query;
+    }
+
+    public void initFirstId() {
+        currentId = query
                 .select(selectFirstId())
                 .fetchOne();
 
         if (logger.isDebugEnabled()) {
-            logger.debug("First Current Id " + this.currentId);
+            logger.debug("First Current Id " + currentId);
         }
     }
 
@@ -46,29 +51,40 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
         return id.max().add(1);
     }
 
+    public JPAQuery<T> createQuery() {
+        if(currentId == null) {
+            return query;
+        }
+
+        return query
+                .where(whereExpression())
+                .orderBy(orderExpression());
+    }
+
     public void resetCurrentId(Object item) {
         try {
-            Field field = item.getClass().getField(this.fieldName);
+            Field field = item.getClass().getField(fieldName);
             field.setAccessible(true);
             currentId = (N) field.get(item);
+
             if (logger.isDebugEnabled()) {
                 logger.debug("Current Id " + currentId);
             }
         } catch (NoSuchFieldException | IllegalAccessException e) {
-            logger.error("Not Found or Not Access Field " + this.fieldName, e);
+            logger.error("Not Found or Not Access Field " + fieldName, e);
             throw new IllegalArgumentException("Not Found or Not Access Field");
         }
     }
 
-    public BooleanExpression whereExpression(N compare) {
+    private BooleanExpression whereExpression() {
         if (expression.isAsc()) {
-            return id.gt(compare);
+            return id.gt(currentId);
         }
 
-        return id.lt(compare);
+        return id.lt(currentId);
     }
 
-    public OrderSpecifier<N> orderExpression() {
+    private OrderSpecifier<N> orderExpression() {
         if (expression.isAsc()) {
             return id.asc();
         }

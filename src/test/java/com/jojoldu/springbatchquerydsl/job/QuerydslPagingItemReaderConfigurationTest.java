@@ -56,10 +56,11 @@ public class QuerydslPagingItemReaderConfigurationTest {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);
         String name = "a";
+        int categoryNo = 1;
         int expected1 = 1000;
         int expected2 = 2000;
-        productRepository.save(new Product(name, expected1, txDate));
-        productRepository.save(new Product(name, expected2, txDate));
+        productRepository.save(new Product(name, expected1, categoryNo, txDate));
+        productRepository.save(new Product(name, expected2, categoryNo, txDate));
 
         JobParameters jobParameters = new JobParametersBuilder()
                 .addString("txDate", txDate.format(FORMATTER))
