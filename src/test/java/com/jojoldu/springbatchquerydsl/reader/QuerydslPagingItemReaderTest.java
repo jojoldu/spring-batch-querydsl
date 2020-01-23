@@ -35,7 +35,7 @@ public class QuerydslPagingItemReaderTest {
 
     @After
     public void tearDown() throws Exception {
-        productRepository.deleteAll();
+        productRepository.deleteAllInBatch();
     }
 
     @Test

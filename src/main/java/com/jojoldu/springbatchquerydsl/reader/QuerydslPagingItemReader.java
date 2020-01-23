@@ -78,7 +78,7 @@ public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
 
     protected void initResults() {
         if (CollectionUtils.isEmpty(results)) {
-            results = new CopyOnWriteArrayList<T>();
+            results = new CopyOnWriteArrayList<>();
         } else {
             results.clear();
         }

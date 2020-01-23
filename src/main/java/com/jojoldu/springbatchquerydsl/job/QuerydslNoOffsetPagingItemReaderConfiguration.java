@@ -2,8 +2,8 @@ package com.jojoldu.springbatchquerydsl.job;
 
 import com.jojoldu.springbatchquerydsl.entity.Product;
 import com.jojoldu.springbatchquerydsl.entity.ProductBackup;
-import com.jojoldu.springbatchquerydsl.reader.QuerydslNoOffsetNumberOptions;
-import com.jojoldu.springbatchquerydsl.reader.QuerydslNoOffsetNumberOptions.Expression;
+import com.jojoldu.springbatchquerydsl.reader.options.QuerydslNoOffsetNumberOptions;
+import com.jojoldu.springbatchquerydsl.reader.expression.Expression;
 import com.jojoldu.springbatchquerydsl.reader.QuerydslNoOffsetPagingItemReader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -71,7 +71,7 @@ public class QuerydslNoOffsetPagingItemReaderConfiguration {
     }
 
     @Bean
-    public QuerydslNoOffsetPagingItemReader<Product, Long> reader() {
+    public QuerydslNoOffsetPagingItemReader<Product> reader() {
         // 1. No Offset 옵션
         QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, Expression.ASC);
 

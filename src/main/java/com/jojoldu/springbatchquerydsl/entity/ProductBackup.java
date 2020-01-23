@@ -6,7 +6,6 @@ package com.jojoldu.springbatchquerydsl.entity;
  * Github : https://github.com/jojoldu
  */
 
-import com.jojoldu.springbatchquerydsl.reader.BaseEntityId;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,7 +19,7 @@ import java.time.LocalDate;
 @Getter
 @NoArgsConstructor
 @Entity
-public class ProductBackup implements BaseEntityId {
+public class ProductBackup {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
