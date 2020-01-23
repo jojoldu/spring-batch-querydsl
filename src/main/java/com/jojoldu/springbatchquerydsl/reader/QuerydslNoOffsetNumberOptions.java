@@ -15,11 +15,21 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
     protected Log logger = LogFactory.getLog(getClass());
 
     private N currentId;
-    private JPAQuery<T> query;
 
     private final NumberPath<N> id;
     private final String fieldName;
     private final Expression expression;
+
+    public QuerydslNoOffsetNumberOptions(@Nonnull NumberPath<N> id,
+                                         @Nonnull Expression expression) {
+        this.id = id;
+        this.fieldName = id.toString().split("\\.")[1];
+        this.expression = expression;
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("fieldName= " + fieldName);
+        }
+    }
 
     public QuerydslNoOffsetNumberOptions(@Nonnull NumberPath<N> id,
                                          @Nonnull String fieldName,
@@ -29,11 +39,11 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
         this.expression = expression;
     }
 
-    public void setQuery(JPAQuery<T> query) {
-        this.query = query;
+    public String getFieldName() {
+        return fieldName;
     }
 
-    public void initFirstId() {
+    public void initFirstId(JPAQuery<T> query) {
         currentId = query
                 .select(selectFirstId())
                 .fetchOne();
@@ -51,7 +61,7 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
         return id.max().add(1);
     }
 
-    public JPAQuery<T> createQuery() {
+    public JPAQuery<T> createQuery(JPAQuery<T> query) {
         if(currentId == null) {
             return query;
         }
@@ -63,15 +73,15 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
 
     public void resetCurrentId(Object item) {
         try {
-            Field field = item.getClass().getField(fieldName);
+            Field field = item.getClass().getDeclaredField(fieldName);
             field.setAccessible(true);
             currentId = (N) field.get(item);
 
             if (logger.isDebugEnabled()) {
-                logger.debug("Current Id " + currentId);
+                logger.debug("Current Id= " + currentId);
             }
         } catch (NoSuchFieldException | IllegalAccessException e) {
-            logger.error("Not Found or Not Access Field " + fieldName, e);
+            logger.error("Not Found or Not Access Field= " + fieldName, e);
             throw new IllegalArgumentException("Not Found or Not Access Field");
         }
     }

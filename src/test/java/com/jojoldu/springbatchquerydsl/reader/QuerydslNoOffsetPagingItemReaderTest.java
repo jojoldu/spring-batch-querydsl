@@ -83,6 +83,17 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         assertThat(query.toString()).contains("select max(product.id)");
     }
 
+    @Test
+    public void path변수에서_필드명을_추출한다() throws Exception {
+        //given
+        String expected = "id";
+
+        //when
+        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id,  Expression.ASC);
+
+        //then
+        assertThat(options.getFieldName()).isEqualTo(expected);
+    }
 
     @Test
     public void reader가_정상적으로_값을반환한다() throws Exception {
@@ -95,7 +106,7 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         productRepository.save(new Product(name, expected1, categoryNo, txDate));
         productRepository.save(new Product(name, expected2, categoryNo, txDate));
 
-        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, "id", Expression.ASC);
+        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id,  Expression.ASC);
 
         int chunkSize = 1;
 
@@ -121,7 +132,7 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);
 
-        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, "id", Expression.ASC);
+        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id,  Expression.ASC);
 
         int chunkSize = 1;
 
@@ -149,7 +160,7 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         productRepository.save(new Product(name, expected1, categoryNo, txDate));
         productRepository.save(new Product(name, expected2, categoryNo, txDate));
 
-        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, "id", Expression.DESC);
+        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id,  Expression.DESC);
 
         int chunkSize = 1;
 

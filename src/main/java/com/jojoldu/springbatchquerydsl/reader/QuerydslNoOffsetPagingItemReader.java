@@ -46,16 +46,14 @@ public class QuerydslNoOffsetPagingItemReader<T, N extends Number & Comparable<?
     @Override
     protected JPAQuery<T> createQuery() {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
-        JPAQuery<T> query = queryFunction.apply(queryFactory);
-        options.setQuery(query);
-        initIdIfFirstPage();
+        initIdIfFirstPage(queryFunction.apply(queryFactory));
 
-        return options.createQuery();
+        return options.createQuery(queryFunction.apply(queryFactory));
     }
 
-    private void initIdIfFirstPage() {
+    private void initIdIfFirstPage(JPAQuery<T> query) {
         if(getPage() == 0) {
-            options.initFirstId();
+            options.initFirstId(query);
         }
     }
 

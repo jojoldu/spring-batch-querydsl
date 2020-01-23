@@ -73,7 +73,7 @@ public class QuerydslNoOffsetPagingItemReaderConfiguration {
     @Bean
     public QuerydslNoOffsetPagingItemReader<Product, Long> reader() {
         // 1. No Offset 옵션
-        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id,"id", Expression.ASC);
+        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, Expression.ASC);
 
         // 2. Querydsl
         return new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
