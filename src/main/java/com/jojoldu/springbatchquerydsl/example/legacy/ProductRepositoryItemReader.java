@@ -1,6 +1,6 @@
-package com.jojoldu.springbatchquerydsl.legacy;
+package com.jojoldu.springbatchquerydsl.example.legacy;
 
-import com.jojoldu.springbatchquerydsl.entity.Product;
+import com.jojoldu.springbatchquerydsl.example.entity.Product;
 import org.springframework.batch.item.database.AbstractPagingItemReader;
 
 import java.time.LocalDate;

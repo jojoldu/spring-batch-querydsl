@@ -1,4 +1,4 @@
-package com.jojoldu.springbatchquerydsl.job;
+package com.jojoldu.springbatchquerydsl.example.job;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

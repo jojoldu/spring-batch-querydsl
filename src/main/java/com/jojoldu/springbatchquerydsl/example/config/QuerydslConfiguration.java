@@ -1,4 +1,4 @@
-package com.jojoldu.springbatchquerydsl.config;
+package com.jojoldu.springbatchquerydsl.example.config;
 
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.context.annotation.Bean;

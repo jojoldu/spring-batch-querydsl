@@ -1,6 +1,6 @@
-package com.jojoldu.springbatchquerydsl.legacy;
+package com.jojoldu.springbatchquerydsl.example.legacy;
 
-import com.jojoldu.springbatchquerydsl.entity.Product;
+import com.jojoldu.springbatchquerydsl.example.entity.Product;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.data.jpa.repository.support.QuerydslRepositorySupport;
 import org.springframework.stereotype.Repository;
@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
 
-import static com.jojoldu.springbatchquerydsl.entity.QProduct.product;
+import static com.jojoldu.springbatchquerydsl.example.entity.QProduct.product;
 
 /**
  * Created by jojoldu@gmail.com on 18/01/2020

@@ -1,9 +1,9 @@
 package com.jojoldu.springbatchquerydsl.reader;
 
 import com.jojoldu.springbatchquerydsl.TestBatchConfig;
-import com.jojoldu.springbatchquerydsl.entity.Product;
-import com.jojoldu.springbatchquerydsl.entity.ProductRepository;
-import com.jojoldu.springbatchquerydsl.job.QuerydslNoOffsetPagingItemReaderConfiguration;
+import com.jojoldu.springbatchquerydsl.example.entity.Product;
+import com.jojoldu.springbatchquerydsl.example.entity.ProductRepository;
+import com.jojoldu.springbatchquerydsl.example.job.QuerydslNoOffsetPagingItemReaderConfiguration;
 import com.jojoldu.springbatchquerydsl.reader.expression.Expression;
 import com.jojoldu.springbatchquerydsl.reader.options.QuerydslNoOffsetNumberOptions;
 import com.jojoldu.springbatchquerydsl.reader.options.QuerydslNoOffsetStringOptions;
@@ -23,7 +23,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import javax.persistence.EntityManagerFactory;
 import java.time.LocalDate;
 
-import static com.jojoldu.springbatchquerydsl.entity.QProduct.product;
+import static com.jojoldu.springbatchquerydsl.example.entity.QProduct.product;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(SpringRunner.class)

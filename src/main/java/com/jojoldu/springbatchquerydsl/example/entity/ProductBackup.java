@@ -1,4 +1,4 @@
-package com.jojoldu.springbatchquerydsl.entity;
+package com.jojoldu.springbatchquerydsl.example.entity;
 
 /**
  * Created by jojoldu@gmail.com on 20/08/2018

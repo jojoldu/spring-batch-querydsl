@@ -1,7 +1,7 @@
-package com.jojoldu.springbatchquerydsl.job;
+package com.jojoldu.springbatchquerydsl.example.job;
 
-import com.jojoldu.springbatchquerydsl.entity.Product;
-import com.jojoldu.springbatchquerydsl.entity.ProductBackup;
+import com.jojoldu.springbatchquerydsl.example.entity.Product;
+import com.jojoldu.springbatchquerydsl.example.entity.ProductBackup;
 import com.jojoldu.springbatchquerydsl.reader.QuerydslPagingItemReader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Configuration;
 
 import javax.persistence.EntityManagerFactory;
 
-import static com.jojoldu.springbatchquerydsl.entity.QProduct.product;
+import static com.jojoldu.springbatchquerydsl.example.entity.QProduct.product;
 
 /**
  * Created by jojoldu@gmail.com on 06/10/2019

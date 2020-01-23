@@ -1,10 +1,10 @@
-package com.jojoldu.springbatchquerydsl.job;
+package com.jojoldu.springbatchquerydsl.example.job;
 
 import com.jojoldu.springbatchquerydsl.TestBatchConfig;
-import com.jojoldu.springbatchquerydsl.entity.Product;
-import com.jojoldu.springbatchquerydsl.entity.ProductBackup;
-import com.jojoldu.springbatchquerydsl.entity.ProductBackupRepository;
-import com.jojoldu.springbatchquerydsl.entity.ProductRepository;
+import com.jojoldu.springbatchquerydsl.example.entity.Product;
+import com.jojoldu.springbatchquerydsl.example.entity.ProductBackup;
+import com.jojoldu.springbatchquerydsl.example.entity.ProductBackupRepository;
+import com.jojoldu.springbatchquerydsl.example.entity.ProductRepository;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,9 +31,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Github : http://github.com/jojoldu
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = {TestBatchConfig.class, QuerydslPagingItemReaderConfiguration.class})
+@SpringBootTest(classes = {TestBatchConfig.class, QuerydslNoOffsetPagingItemReaderConfiguration.class})
 @SpringBatchTest
-public class QuerydslPagingItemReaderConfigurationTest {
+public class QuerydslNoOffsetPagingItemReaderConfigurationTest {
     public static final DateTimeFormatter FORMATTER = ofPattern("yyyy-MM-dd");
 
     @Autowired

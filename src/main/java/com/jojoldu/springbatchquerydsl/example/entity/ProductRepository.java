@@ -1,4 +1,4 @@
-package com.jojoldu.springbatchquerydsl.entity;
+package com.jojoldu.springbatchquerydsl.example.entity;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
