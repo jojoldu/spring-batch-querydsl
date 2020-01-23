@@ -1,1 +1,3 @@
 rootProject.name = 'spring-batch-querydsl'
+
+include 'spring-batch-querydsl-reader', 'spring-batch-querydsl-integration-test'
