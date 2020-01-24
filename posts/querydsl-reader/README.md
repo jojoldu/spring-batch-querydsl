@@ -268,21 +268,37 @@ Querydsl의 쿼리를 람다표현식으로 받도록 하여 **매번 새로운 
 
 (사용 예시)  
   
-기존의 JpaPagingItemReader, HibernatePagingItemReader 와 비슷한 사용성을 가지게 된 것이죠.  
+기존의 JpaPagingItemReader, HibernatePagingItemReader 처럼 Job 클래스내부에서 사용할 수 있게 되었습니다.  
   
 createQuery 메소드는 생성자 인자로 받은 ```queryFunction```을 사용해 Querydsl 쿼리를 생성합니다.
 
 ![pagingReader3](./images/pagingReader3.png)
 
+offset과 limit은 부모 클래스인 AbstractPagingItemReader 의 ```getPage()``` 와 ```getPageSize()```를 사용하여 최대한 변경 요소를 줄입니다.  
+  
+코드를 보시면 JpaPagingItemReader의 ```doReadPage()``` 에서 ```createQuery``` 외에 다른 부분이 있다는 것을 알 수 있으실텐데요.  
+  
+바로 ```EntityTransaction``` 부분입니다.
 
+![jpatx](./images/jpatx.png)
 
-코드를 보시면 기존의 ```createQuery``` 외에 ```doReadPage()```에 다른 부분이 있다는 것을 알 수 있으실텐데요.
+해당 부분을 QuerydslPagingItemReader에서 제거한 이유는 ```hibernate.default_batch_fetch_size```이 정상적으로 작동하지 않기 때문입니다.  
 
-> 실제로 해당 이슈에 대해서는 Spring Batch 팀에 [PR](https://github.com/spring-projects/spring-batch/pull/713)을 보낸 상황입니다.
+> hibernate.default_batch_fetch_size 옵션이 처음이시라면 어떤 옵션인지에 대한 내용은 [이전에 작성한 포스팅](https://jojoldu.tistory.com/457)을 참고해보세요. 
+
+> 해당 옵션이 작동되지 않는 이유에 대해서는 [이전에 작성한 포스팅](https://jojoldu.tistory.com/414)을 참고해주세요.
+
+대량의 데이터에서 주로 사용되는 배치 애플리케이션에서 JPA의 N+1 문제는 심각한 성능 저하를 일으키기 때문에 해당 부분을 제거했습니다.  
+  
+그럼 새롭게 만든 이 ItemReader가 제대로 작동하는지 테스트 코드로 검증해보겠습니다.
+
+> 위 이슈에 대해서는 Spring Batch 팀에 [PR](https://github.com/spring-projects/spring-batch/pull/713)을 보낸 상황입니다.
 
 ### 1-1. 테스트코드로 검증
 
-자 그럼 실제로 ```QuerydslPagingItemReader```의 기능이 잘 작동하는지 테스트코드로 검증해보겠습니다.
+먼저 페이지 사이즈에 따라 데이터가 정상적으로 반환되는지 테스트 해보겠습니다.
+
+> 전체 테스트 코드는 [Github](https://github.com/jojoldu/spring-batch-querydsl/tree/master/spring-batch-querydsl-integration-test/src/test/java/org/springframework/batch/item/querydsl/integrationtest)에 별도로 올라갔습니다.
 
 ```java
 @Test
@@ -295,9 +311,9 @@ public void reader가_정상적으로_값을반환한다() throws Exception {
     productRepository.save(new Product(name, expected1, txDate));
     productRepository.save(new Product(name, expected2, txDate));
 
-    int chunkSize = 1; // (1)
+    int pageSize = 1; // (1)
 
-    QuerydslPagingItemReader<Product> reader = new QuerydslPagingItemReader<>(emf, chunkSize, queryFactory -> queryFactory
+    QuerydslPagingItemReader<Product> reader = new QuerydslPagingItemReader<>(emf, pageSize, queryFactory -> queryFactory
             .selectFrom(product)
             .where(product.createDate.eq(txDate)));
 
@@ -309,24 +325,54 @@ public void reader가_정상적으로_값을반환한다() throws Exception {
     Product read3 = reader.read();
 
     //then
-    assertThat(read1.getPrice()).isEqualTo(1000L);
-    assertThat(read2.getPrice()).isEqualTo(2000L);
+    assertThat(read1.getPrice()).isEqualTo(expected1);
+    assertThat(read2.getPrice()).isEqualTo(expected2);
     assertThat(read3).isNull(); // (3)
 }
 
 ```
 
-(1) 페이징이 정상적으로 되는지 확인하기 위해 chunkSize를 1로 했습니다.
+(1) **페이징이 정상적으로 되는지** 확인하기 위해 pageSize를 1로 했습니다.
 
 * 2개의 데이터를 넣었으니, 이렇게 하면 **총 3번의 페이징 쿼리가 발생**합니다.
+* 2번이 아니라 3번인 이유는, 마지막 쿼리를 통해 **더이상 읽을것이 없는지** 확인하기 때문입니다.
   
 (2) ItemReader만 단독으로 테스트 하기 위해서는 별도의 실행환경 (```ExecutionContext```)을 등록 해줘야만 합니다.
 
 * ```open``` 메소드를 실행하지 않으면 ```EntityManager```를 등록하지 않습니다.
 
-(3) ItemReader에서는 더이상 읽을 데이터(```read()``` 가 없을 경우 ```null```을 반환합니다.
+(3) ItemReader에서는 더이상 읽을 데이터가 없을 경우 ```read()```에서 ```null```을 반환합니다.
+
+자 그럼 이 테스트 코드를 수행해보겠습니다.
+
+![pagingTest1](./images/pagingTest1.png)
+
+
+```java
+@Test
+public void 빈값일경우_null이_반환된다() throws Exception {
+    //given
+    LocalDate txDate = LocalDate.of(2020,10,12);
+
+    int pageSize = 1;
+
+    QuerydslPagingItemReader<Product> reader = new QuerydslPagingItemReader<>(emf, pageSize, queryFactory -> queryFactory
+            .selectFrom(product)
+            .where(product.createDate.eq(txDate)));
+
+    reader.open(new ExecutionContext());
+
+    //when
+    Product read1 = reader.read();
+
+    //then
+    assertThat(read1).isNull();
+}
+```
 
 ### 1-2. 사용 방법
+
+이렇게 만든 QuerydslPagingItemReader는 아래와 같이 사용할 수 있습니다.
 
 ```java
 @Slf4j

@@ -53,9 +53,9 @@ public class QuerydslPagingItemReaderTest {
         productRepository.save(new Product(name, expected1, categoryNo, txDate));
         productRepository.save(new Product(name, expected2, categoryNo, txDate));
 
-        int chunkSize = 1;
+        int pageSize = 1;
 
-        QuerydslPagingItemReader<Product> reader = new QuerydslPagingItemReader<>(emf, chunkSize, queryFactory -> queryFactory
+        QuerydslPagingItemReader<Product> reader = new QuerydslPagingItemReader<>(emf, pageSize, queryFactory -> queryFactory
                 .selectFrom(product)
                 .where(product.createDate.eq(txDate)));
 
@@ -67,8 +67,8 @@ public class QuerydslPagingItemReaderTest {
         Product read3 = reader.read();
 
         //then
-        assertThat(read1.getPrice()).isEqualTo(1000L);
-        assertThat(read2.getPrice()).isEqualTo(2000L);
+        assertThat(read1.getPrice()).isEqualTo(expected1);
+        assertThat(read2.getPrice()).isEqualTo(expected2);
         assertThat(read3).isNull();
     }
 
@@ -77,9 +77,9 @@ public class QuerydslPagingItemReaderTest {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);
 
-        int chunkSize = 1;
+        int pageSize = 1;
 
-        QuerydslPagingItemReader<Product> reader = new QuerydslPagingItemReader<>(emf, chunkSize, queryFactory -> queryFactory
+        QuerydslPagingItemReader<Product> reader = new QuerydslPagingItemReader<>(emf, pageSize, queryFactory -> queryFactory
                 .selectFrom(product)
                 .where(product.createDate.eq(txDate)));
 
