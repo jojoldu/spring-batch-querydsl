@@ -8,7 +8,10 @@ import org.springframework.batch.item.querydsl.integrationtest.TestBatchConfig;
 import org.springframework.batch.item.querydsl.integrationtest.entity.Product;
 import org.springframework.batch.item.querydsl.integrationtest.entity.ProductRepository;
 import org.springframework.batch.item.querydsl.integrationtest.job.QuerydslPagingItemReaderConfiguration;
+import org.springframework.batch.item.querydsl.reader.QuerydslNoOffsetPagingItemReader;
 import org.springframework.batch.item.querydsl.reader.QuerydslPagingItemReader;
+import org.springframework.batch.item.querydsl.reader.expression.Expression;
+import org.springframework.batch.item.querydsl.reader.options.QuerydslNoOffsetNumberOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -67,5 +70,25 @@ public class QuerydslPagingItemReaderTest {
         assertThat(read1.getPrice()).isEqualTo(1000L);
         assertThat(read2.getPrice()).isEqualTo(2000L);
         assertThat(read3).isNull();
+    }
+
+    @Test
+    public void 빈값일경우_null이_반환된다() throws Exception {
+        //given
+        LocalDate txDate = LocalDate.of(2020,10,12);
+
+        int chunkSize = 1;
+
+        QuerydslPagingItemReader<Product> reader = new QuerydslPagingItemReader<>(emf, chunkSize, queryFactory -> queryFactory
+                .selectFrom(product)
+                .where(product.createDate.eq(txDate)));
+
+        reader.open(new ExecutionContext());
+
+        //when
+        Product read1 = reader.read();
+
+        //then
+        assertThat(read1).isNull();
     }
 }

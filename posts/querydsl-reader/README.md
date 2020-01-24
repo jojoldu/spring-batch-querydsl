@@ -7,7 +7,7 @@
 웹 애플리케이션에서는 크게 문제가 없으나, 배치 애플리케이션에서는 문제가 하나 있었습니다.  
   
 그건 바로 Spring Batch 프레임워크에서 공식적으로 **QuerydslItemReader를 지원하지 않는 것**이였습니다.  
-
+  
 아래는 Spring Batch에서 공식적으로 지원하는 ItemReader들의 목록입니다.
 
 | Reader                    |
@@ -21,9 +21,9 @@
 
 이외에도 [다양한 ItemReader](https://docs.spring.io/spring-batch/docs/current/reference/html/appendix.html#itemReadersAppendix)들을 지원하지만 **QuerydslItemReader는 지원하지 않습니다**.
 
-> 참고로 IbatisItemReader로 지원이 중단되었습니다.  
+> 참고로 IbatisItemReader도 지원이 중단되었습니다.  
 > MyBatis 진영에서 직접 [MyBatisPagingItemReader](http://mybatis.org/spring/batch.html) 를 만들어 지원하고 있습니다.
- 
+
 이러다보니 Spring Batch에서 Querydsl를 사용하기가 쉽지 않았는데요.  
   
 큰 변경 없이 Spring Batch에 Querydsl ItemReader를 사용한다면 다음과 같이 **AbstractPagingItemReader를 상속한 ItemReader** 생성해야만 했습니다.
@@ -61,7 +61,7 @@ public class ProductRepositoryItemReader extends AbstractPagingItemReader<Produc
 }
 ```
 
-ItemReader에서 사용할 Querydsl을 이용한 **페이징 쿼리를 가진 Repository**도 추가로 생성해야만 합니다
+당연히 이 ItemReader에서 사용할 **페이징 쿼리를 가진 Querydsl Repository**도 추가로 생성합니다.
 
 ```java
 @Repository
@@ -87,17 +87,17 @@ public class ProductBatchRepository extends QuerydslRepositorySupport {
 위 코드를 **매 Batch Job마다 작성**해야만 했습니다.  
   
 중요한 Querydsl의 쿼리 작성보다 **행사코드가 더 많은 일**이 발생한 것이죠.  
-행사코드가 많다는 말은 중요하지 않은 코드에 더 많은 시간을 써야할 수도 있음을 이야기합니다.  
+행사코드가 많다는 말은 **중요하지 않은 코드에 더 많은 시간을 써야할 수도** 있음을 이야기합니다.  
   
-실제로 위의 Reader에서 변경이 필요한 부분은 **주어진 조건의 Product를 가져오는 쿼리** 부분입니다.  
+실제로 위의 Reader에서 변경이 필요한 부분은 **주어진 조건의 Product를 가져오는 쿼리**입니다.  
 repository의 Querydsl 부분을 제외하고는 **대부분은 비슷한 코드가 필요합니다**.  
   
-결과적으로 JpaPagingItemReader, HibernatePagingItemReader에 비해 위 방식은 불편한 점이 있다고 판단되었습니다.  
+결과적으로 JpaPagingItemReader, HibernatePagingItemReader에 비해 Querydsl을 사용하는 방식은 불편한 점이 있다고 판단되었습니다.  
 
 > 물론 Querdsl을 포기하고 JpaPagingItemReader를 이용해도 됩니다만, 그렇게 되면 Querydsl의 **타입 안정성, 자동완성, 컴파일 단계 문법체크, 공백이슈**를 지원받을 수가 없습니다.  
 > 100개가 넘는 테이블, 수십개의 배치를 개발/운영하는 입장에서 이걸 포기할 순 없었습니다.
   
-그래서 팀에서는 Spring Batch의 ItemReader를 생성할때 **Querydsl의 쿼리에만 집중**할 수 있도록 QuerydslPagingItemReader를 개발하게 되었습니다.  
+그래서 팀에서는 **Querydsl의 쿼리에만 집중**할 수 있도록  QuerydslPagingItemReader를 개발하게 되었습니다.  
   
 이 글에서는 아래 2가지 ItemReader에 대해 소개하고 사용법을 다뤄볼 예정입니다.
 
@@ -139,8 +139,11 @@ Spring Batch의 구조를 보면서 확인해보겠습니다.
 ![createQuery](./images/createQuery.png)
 
 단순하게 JpaPagingItemReader를 상속하여 ```createQuery()```만 override를 할 수 없다는 것을 알게되었으니 **JpaPagingItemReader의 전체 코드를 복사**하여 생성하겠습니다.  
+
+> 이 부분을 ```protected```로 변경해주면 참 좋겠는데 아쉽습니다.
   
-아래가 QuerydslPagingItemReader의 전체 코드입니다.
+복사한 JpaPagingItemReader를 코드로 QuerydslPagingItemReader 를 만들어보겠습니다.  
+
 
 ```java
 import com.querydsl.jpa.impl.JPAQuery;
@@ -221,7 +224,7 @@ public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
 
     protected void initResults() {
         if (CollectionUtils.isEmpty(results)) {
-            results = new CopyOnWriteArrayList<T>();
+            results = new CopyOnWriteArrayList<>();
         } else {
             results.clear();
         }
@@ -251,7 +254,7 @@ public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
 }
 ```
 
-> 후술할 Querydsl**NoOffset**PagingItemReader에서 QuerydslPagingItemReader를 상속하기 때문에 대부분의 메소드와 필드는 ```protected``` 입니다.
+> 후술할 Querydsl**NoOffset**PagingItemReader에서 QuerydslPagingItemReader를 **상속**하기 때문에 대부분의 메소드와 필드는 ```protected``` 입니다.
 
 대부분의 코드가 기존 JpaPagingItemReader에 있던 코드라 달라진 부분들만 보시면 될것 같습니다.  
   
