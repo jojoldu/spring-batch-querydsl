@@ -448,58 +448,43 @@ public class QuerydslPagingItemReaderConfiguration {
 > JPA의 Entity를 사용하는 Reader에서는 **chunkSize와 pageSize 값을 일치**시키시는게 좋습니다.  
 > 관련해서는 이전에 [별도로 포스팅](https://jojoldu.tistory.com/146)한게 있으니 참고하시면 좋습니다.
 
-해당 Job을 테스트코드로도 검증해봅니다.
+해당 Job 역시 테스트 코드로 검증해봅니다.
 
 ```java
-@RunWith(SpringRunner.class)
-@SpringBootTest(classes = {TestBatchConfig.class, QuerydslPagingItemReaderConfiguration.class})
-@SpringBatchTest
-public class QuerydslPagingItemReaderConfigurationTest {
-    public static final DateTimeFormatter FORMATTER = ofPattern("yyyy-MM-dd");
+@Test
+public void Product가_ProductBackup으로_이관된다() throws Exception {
+    //given
+    LocalDate txDate = LocalDate.of(2020,10,12);
+    String name = "a";
+    int categoryNo = 1;
+    int expected1 = 1000;
+    int expected2 = 2000;
+    productRepository.save(new Product(name, expected1, categoryNo, txDate));
+    productRepository.save(new Product(name, expected2, categoryNo, txDate));
 
-    @Autowired
-    private ProductRepository productRepository;
+    JobParameters jobParameters = new JobParametersBuilder()
+            .addString("txDate", txDate.format(FORMATTER))
+            .toJobParameters();
 
-    @Autowired
-    private ProductBackupRepository productBackupRepository;
+    //when
+    JobExecution jobExecution = jobLauncherTestUtils.launchJob(jobParameters);
 
-    @Autowired
-    private JobLauncherTestUtils jobLauncherTestUtils;
-
-    @After
-    public void after() throws Exception {
-        productRepository.deleteAllInBatch();
-        productBackupRepository.deleteAllInBatch();
-    }
-
-    @Test
-    public void Product가_ProductBackup으로_이관된다() throws Exception {
-        //given
-        LocalDate txDate = LocalDate.of(2020,10,12);
-        String name = "a";
-        int expected1 = 1000;
-        int expected2 = 2000;
-        productRepository.save(new Product(name, expected1, txDate));
-        productRepository.save(new Product(name, expected2, txDate));
-
-        JobParameters jobParameters = new JobParametersBuilder()
-                .addString("txDate", txDate.format(FORMATTER))
-                .toJobParameters();
-
-        //when
-        JobExecution jobExecution = jobLauncherTestUtils.launchJob(jobParameters);
-
-        //then
-        assertThat(jobExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
-        List<ProductBackup> backups = productBackupRepository.findAll();
-        assertThat(backups.size()).isEqualTo(2);
-    }
+    //then
+    assertThat(jobExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+    List<ProductBackup> backups = productBackupRepository.findAll();
+    assertThat(backups.size()).isEqualTo(2);
 }
 ```
 
+이 테스트 역시 정상적으로 통과 됩니다.
+
+![pagingTest3](./images/pagingTest3.png)
+
+QuerydslPagingItemReader의 구현이 모두 확인 되었으니 다음으로 넘어가겠습니다.
+
 ## 2. QuerydslNoOffsetPagingItemReader
 
-많은 분들이 이미 아시겠지만, MySQL 은 특성상 **페이징이 뒤로 갈수록 느려집니다**.  
+많은 분들이 아시겠지만, MySQL 은 특성상 **페이징이 뒤로 갈수록 느려집니다**.  
   
 즉, 아래와 같은 형태의 쿼리는 **offset 값이 커질수록 느리다**는 의미입니다.
 
@@ -512,7 +497,7 @@ OFFSET 페이지번호
 LIMIT 페이지사이즈
 ```
 
-위 쿼리는 일반적으로 **Batch에서 ItemReader 가 수행하는 쿼리와 유사한 형태**입니다.  
+위 쿼리는 일반적으로 **Spring Batch에서 ItemReader 가 수행하는 쿼리와 유사한 형태**입니다.  
 
 이 문제를 해결하기 위해서는 크게 2가지 해결책이 있습니다.
 
@@ -542,7 +527,8 @@ JOIN (SELECT id
 ```sql
 SELECT  *
 FROM items
-WHERE 조건문 AND id < 마지막조회ID
+WHERE 조건문 
+AND id < 마지막조회ID # 직전 조회 결과의 마지막 id
 ORDER BY id DESC
 LIMIT 페이지사이즈
 ```
@@ -554,37 +540,32 @@ offset 페이징 쿼리가 뒤로갈수록 느린 이유는 결국 **앞에서 �
   
 뒤로갈수록 읽어야할 행의 개수가 많기 때문에 갈수록 느려지는 것입니다.  
   
-두번째 방식은 바로 이 부분에서 **읽기를 시작해야할 부분을 정해줍니다**.  
-이는 데이터베이스가 **이전 페이지의 행을 건너 뛸 수 있음**을 의미합니다.  
+두번째 방식은 바로 이 부분에서 **읽기 시작 부분을 지정해 매번 첫 페이지만 읽도록**하는 방식입니다.  
+이는 쿼리가 매번 **이전 페이지의 행을 건너 뛸 수 있음**을 의미합니다.  
   
-즉, 아무리 페이지가 뒤로 가더라도 **처음 페이지를 읽은것과 동일한 효과**를 가지게 됩니다. 
+즉, 아무리 페이지가 뒤로 가더라도 **처음 페이지를 읽은 것과 동일한 효과**를 가지게 됩니다.
 
 > 참고: [fetch-next-page](https://use-the-index-luke.com/sql/partial-results/fetch-next-page)
 
-
-2가지 방식 모두 성능 향상을 기대할 순 있으나 이번에 만들 PagingItemReader는 2번째 방법을 사용합니다.
+2가지 방식 모두 성능 향상을 기대할 순 있으나 이번에 만들 PagingItemReader (해당 ItemReader의 이름을 ```QuerydslNoOffsetPagingItemReader```로 하겠습니다) 는 2번째 방법을 사용합니다.
 그 이유는 다음과 같습니다.
 
-* 첫 번째 방식 역시 뒤로 갈수록 느려지는 현상은 발생합니다.
-  * 당연히 기존 방식에 비해서는 훨씬 성능이 좋습니다.
 * **JPQL 에서는 from절의 서브쿼리를 지원하지 않습니다**.
-  * 이게 가장 큰 이유였습니다.
 
 그래서 두번째 방식을 선택하게 되었습니다.  
   
-두번째 방식을 선택하면서 몇가지 고려 사항이 있었습니다만 다행히 현재 저희 프로젝트에서는 그 부분들이 모두 문제가 되지않아 **별도의 PagingItemReader**를 만들 수 있었습니다.
-  
-* 모든 Entity는 pk가 **Long 타입, 컬럼명과 필드명 모두 id**로 통일
-  * 왜 이게 필요한지는 이후 구현부에서 자세히 설명드리겠습니다.
+두번째 방식을 선택하면서 몇가지 고려 사항이 있었습니다만 다행히 현재 저희 프로젝트에서는 그 부분들이 모두 문제가 되지않아 **QuerydslNoOffsetPagingItemReader**를 만들 수 있었습니다.
+
 * 대부분의 Batch Job들이 ```order by```가 **필수가 아님**
   * 각 raw 데이터를 읽어와 집계 / 변환하는 Batch들이 대부분이였습니다.
+  * 즉 어떤 순서로 읽는게 중요하지 않고, 대량의 데이터를 가공하는게 중요했습니다.
   * ```order by```가 **pk외에 다른 기준으로 복잡하게** 사용해야 한다면 미리 만들어둔 PagingItemReader를 활용하기는 어렵습니다.
 
 QuerydslNoOffsetPagingItemReader 가 기존의 QuerydslPagingItemReader에 비해 추가되어야 할 점은 다음과 같습니다.
 
 * 조회된 페이지의 **마지막 id 값을 캐시**
 * 캐시된 **마지막 id값을 다음 페이지 쿼리 조건문**에 추가
-* **정렬 기준에 따라** 마지막 id를 이용한 조회 조건이 변경되어야 한다
+* **정렬 기준에 따라** 조회 조건이 마지막 id가 포함되도록 자동 변경
   * ```order by id asc```: ```id > 마지막 id```
   * ```order by id desc```: ```id < 마지막 id```
 
