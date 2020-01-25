@@ -343,10 +343,11 @@ public void reader가_정상적으로_값을반환한다() throws Exception {
 
 (3) ItemReader에서는 더이상 읽을 데이터가 없을 경우 ```read()```에서 ```null```을 반환합니다.
 
-자 그럼 이 테스트 코드를 수행해보겠습니다.
+자 그럼 이 테스트 코드를 수행해보면, 아래와 같이 정상적으로 수행되는 것을 확인할 수 있습니다.
 
 ![pagingTest1](./images/pagingTest1.png)
 
+추가로 조회 결과가 없을 경우에도 테스트 코드로 검증해봅니다.
 
 ```java
 @Test
@@ -370,9 +371,17 @@ public void 빈값일경우_null이_반환된다() throws Exception {
 }
 ```
 
+데이터가 없을 경우 조회쿼리도 정상적으로 잘 작동되는 것을 확인할 수 있습니다.
+
+![pagingTest2](./images/pagingTest2.png)
+
 ### 1-2. 사용 방법
 
-이렇게 만든 QuerydslPagingItemReader는 아래와 같이 사용할 수 있습니다.
+이렇게 만든 QuerydslPagingItemReader는 배치 Job에선 아래와 같이 사용할 수 있습니다.
+
+![pagingReaderSample](./images/pagingReaderSample.png)
+
+전체 코드는 다음과 같습니다.
 
 ```java
 @Slf4j
