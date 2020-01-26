@@ -13,18 +13,12 @@ public class QuerydslNoOffsetStringOptions<T> extends QuerydslNoOffsetOptions <T
 
     private String currentId;
 
-    private final StringPath id;
+    private final StringPath field;
 
-    public QuerydslNoOffsetStringOptions(@Nonnull StringPath id,
+    public QuerydslNoOffsetStringOptions(@Nonnull StringPath field,
                                          @Nonnull Expression expression) {
-        this(id, id.toString().split("\\.")[1], expression);
-    }
-
-    public QuerydslNoOffsetStringOptions(@Nonnull StringPath id,
-                                         @Nonnull String fieldName,
-                                         @Nonnull Expression expression) {
-        super(fieldName, expression);
-        this.id = id;
+        super(field, expression);
+        this.field = field;
     }
 
     @Override
@@ -43,10 +37,10 @@ public class QuerydslNoOffsetStringOptions<T> extends QuerydslNoOffsetOptions <T
 
     private StringExpression selectFirstId() {
         if (expression.isAsc()) {
-            return id.min();
+            return field.min();
         }
 
-        return id.max();
+        return field.max();
     }
 
     @Override
@@ -61,11 +55,11 @@ public class QuerydslNoOffsetStringOptions<T> extends QuerydslNoOffsetOptions <T
     }
 
     private BooleanExpression whereExpression(int page) {
-        return expression.where(id, page, currentId);
+        return expression.where(field, page, currentId);
     }
 
     private OrderSpecifier<String> orderExpression() {
-        return expression.order(id);
+        return expression.order(field);
     }
 
     @Override

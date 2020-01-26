@@ -1,5 +1,6 @@
 package org.springframework.batch.item.querydsl.reader.options;
 
+import com.querydsl.core.types.Path;
 import com.querydsl.jpa.impl.JPAQuery;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -14,9 +15,9 @@ public abstract class QuerydslNoOffsetOptions<T> {
     protected final String fieldName;
     protected final Expression expression;
 
-    public QuerydslNoOffsetOptions(@Nonnull String fieldName,
+    public QuerydslNoOffsetOptions(@Nonnull Path field,
                                    @Nonnull Expression expression) {
-        this.fieldName = fieldName;
+        this.fieldName = field.toString().split("\\.")[1];
         this.expression = expression;
 
         if (logger.isDebugEnabled()) {

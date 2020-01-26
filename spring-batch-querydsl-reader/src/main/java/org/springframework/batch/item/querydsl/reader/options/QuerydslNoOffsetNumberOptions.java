@@ -13,18 +13,12 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
 
     private N currentId;
 
-    private final NumberPath<N> id;
+    private final NumberPath<N> field;
 
-    public QuerydslNoOffsetNumberOptions(@Nonnull NumberPath<N> id,
+    public QuerydslNoOffsetNumberOptions(@Nonnull NumberPath<N> field,
                                          @Nonnull Expression expression) {
-        this(id, id.toString().split("\\.")[1], expression);
-    }
-
-    public QuerydslNoOffsetNumberOptions(@Nonnull NumberPath<N> id,
-                                         @Nonnull String fieldName,
-                                         @Nonnull Expression expression) {
-        super(fieldName, expression);
-        this.id = id;
+        super(field, expression);
+        this.field = field;
     }
 
     @Override
@@ -42,10 +36,10 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
 
     private NumberExpression<N> selectFirstId() {
         if (expression.isAsc()) {
-            return id.min();
+            return field.min();
         }
 
-        return id.max();
+        return field.max();
     }
 
     @Override
@@ -60,11 +54,11 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
     }
 
     private BooleanExpression whereExpression(int page) {
-        return expression.where(id, page, currentId);
+        return expression.where(field, page, currentId);
     }
 
     private OrderSpecifier<N> orderExpression() {
-        return expression.order(id);
+        return expression.order(field);
     }
 
     @Override
