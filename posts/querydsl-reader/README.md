@@ -569,22 +569,32 @@ QuerydslNoOffsetPagingItemReader 가 기존의 QuerydslPagingItemReader에 비�
   * ```order by id asc```: ```id > 마지막 id```
   * ```order by id desc```: ```id < 마지막 id```
 
+여기서 좀 더 보편적으로 사용하기 위해서는 몇개의 조건이 추가됩니다.
+
+* ```id``` 뿐만 아니라 다른 필드들도 ```order by``` 조건에 사용할 수 있어야 함
+  * 모든 테이블의 PK 필드가 꼭 ```id```가 아닐 수 있음
+  * ```order by```가 별도의 필드로 필요할 수도 있음
+* ```Long``` (```bigint```) 외에도 정렬 기준이 가능해야함
+  * ```String``` (```varchar```), ```Integer``` (```int```) 등도 언제든 조건으로 사용할 수 있습니다.
+* 어떤 필드를 대상으로 사용할지 **문자열이 아닌, QClass 필드**로 직접 지정할 수 있어야 합니다
+  * 문자열로 지정할 경우, **오타, 필드변경**에 대해 컴파일체크가 안되기 때문에 Querydsl의 QClass 필드로 지정합니다.
+
 
 전체 코드는 아래와 같습니다.
 
 ```java
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import org.springframework.batch.item.querydsl.reader.options.QuerydslNoOffsetOptions;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
 
 import javax.persistence.EntityManagerFactory;
 import java.util.function.Function;
 
-public class QuerydslNoOffsetPagingItemReader<T extends BaseEntityId> extends QuerydslPagingItemReader<T> {
+public class QuerydslNoOffsetPagingItemReader<T> extends QuerydslPagingItemReader<T> {
 
-    private Long currentId = 0L;
-    private QuerydslNoOffsetOptions options;
+    private QuerydslNoOffsetOptions<T> options;
 
     private QuerydslNoOffsetPagingItemReader() {
         super();
@@ -593,7 +603,7 @@ public class QuerydslNoOffsetPagingItemReader<T extends BaseEntityId> extends Qu
 
     public QuerydslNoOffsetPagingItemReader(EntityManagerFactory entityManagerFactory,
                                             int pageSize,
-                                            QuerydslNoOffsetOptions options,
+                                            QuerydslNoOffsetOptions<T> options,
                                             Function<JPAQueryFactory, JPAQuery<T>> queryFunction) {
         this();
         super.entityManagerFactory = entityManagerFactory;
@@ -614,44 +624,30 @@ public class QuerydslNoOffsetPagingItemReader<T extends BaseEntityId> extends Qu
 
         fetchQuery(query);
 
-        resetCurrentId();
+        resetCurrentIdIfNotLastPage();
     }
 
     @Override
     protected JPAQuery<T> createQuery() {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
+        options.initFirstId(queryFunction.apply(queryFactory), getPage());
 
-        initIdIfFirstPage(queryFactory);
-
-        if(this.currentId == null) {
-            return queryFunction.apply(queryFactory);
-        }
-
-        return queryFunction.apply(queryFactory)
-                .where(options.whereExpression(currentId))
-                .orderBy(options.orderExpression());
+        return options.createQuery(queryFunction.apply(queryFactory), getPage());
     }
 
-    private void initIdIfFirstPage(JPAQueryFactory queryFactory) {
-        if(getPage() == 0) {
-            this.currentId = queryFunction.apply(queryFactory)
-                    .select(options.selectFirstId())
-                    .fetchOne();
-
-            if (logger.isDebugEnabled()) {
-                logger.debug("First Current Id " + this.currentId);
-            }
+    private void resetCurrentIdIfNotLastPage() {
+        if (isNotEmptyResults()) {
+            options.resetCurrentId(getLastItem());
         }
     }
 
-    private void resetCurrentId() {
-        if (!CollectionUtils.isEmpty(results)) {
-            currentId = results.get(results.size() - 1).getId();
+    // 조회결과가 Empty이면 results에 null이 담긴다
+    private boolean isNotEmptyResults() {
+        return !CollectionUtils.isEmpty(results) && results.get(0) != null;
+    }
 
-            if (logger.isDebugEnabled()) {
-                logger.debug("Current Id " + currentId);
-            }
-        }
+    private T getLastItem() {
+        return results.get(results.size() - 1);
     }
 }
 ```
