@@ -22,7 +22,7 @@
 이외에도 [다양한 ItemReader](https://docs.spring.io/spring-batch/docs/current/reference/html/appendix.html#itemReadersAppendix)들을 지원하지만 **QuerydslItemReader는 지원하지 않습니다**.
 
 > 참고로 IbatisItemReader도 지원이 중단되었습니다.  
-> MyBatis 진영에서 직접 [MyBatisPagingItemReader](http://mybatis.org/spring/batch.html) 를 만들어 지원하고 있습니다.
+> MyBatis 진영에서 직접 [MyBatisPagingItemReader](http://mybatis.org/spring/batch.html) 를 만들어 지원하고 있으니 참고해보세요.
 
 이러다보니 Spring Batch에서 Querydsl를 사용하기가 쉽지 않았는데요.  
   
@@ -518,13 +518,13 @@ JOIN (SELECT id
         LIMIT 페이지사이즈) as temp on temp.id = i.id
 ```
 
-많은 부하가 필요한 ```order by```, ```offset```은 클러스터 인덱스인 ```id```로 진행하고, 그 결과로 나온 id 값들 (```limit``` 만큼 조회된 결과) 을 통해 다른 필요한  필드들은 실제로 해당 행에 접근해서 가져오는 방식을 이야기 합니다.
+많은 부하가 필요한 ```order by```, ```offset```은 클러스터 인덱스인 ```id```로 진행하고, 그 결과로 나온 id 값들 (```limit``` 만큼 조회된 결과) 을 통해 다른 필요한 필드들은 실제로 해당 행에 접근해서 가져오는 방식을 이야기 합니다.
 
 > 참고: https://elky84.github.io/2018/10/05/mysql/
 
 ### 2) offset을 제거한 페이징쿼리 사용하기
 
-두번째는 **이전에 조회된 결과를 한번에 건너뛸수 있게** 마지막 조회결과의 ID를 조건문에 사용하는 것입니다.
+두번째는 **이전에 조회된 결과를 한번에 건너뛸수 있게** 마지막 조회 결과의 ID를 조건문에 사용하는 것입니다.
 
 ```sql
 SELECT  *
@@ -537,7 +537,7 @@ LIMIT 페이지사이즈
 
 offset 페이징 쿼리가 뒤로갈수록 느린 이유는 결국 **앞에서 읽었던 행을 다시 읽어야하기 때문**인데요.  
   
-예를 들어 ```limit 10000, 20``` 이라 하면 10,020개의 행을 읽어야 합니다.  
+예를 들어 ```limit 10000, 20``` 이라 하면 **10,020개의 행**을 읽어야 합니다.  
 그리고 이 중 앞의 10,000 개 행을 버리는 과정이 들어갑니다.  
   
 뒤로갈수록 읽어야할 행의 개수가 많기 때문에 갈수록 느려지는 것입니다.  
@@ -554,16 +554,15 @@ offset 페이징 쿼리가 뒤로갈수록 느린 이유는 결국 **앞에서 �
 
 * **JPQL 에서는 from절의 서브쿼리를 지원하지 않습니다**.
 
-그래서 두번째 방식을 선택하게 되었습니다.  
-  
 두번째 방식을 선택하면서 몇가지 고려 사항이 있었습니다만 다행히 현재 저희 프로젝트에서는 그 부분들이 모두 문제가 되지않아 **QuerydslNoOffsetPagingItemReader**를 만들 수 있었습니다.
 
-* 대부분의 Batch Job들이 ```order by```가 **필수가 아님**
+* 대부분의 Batch Job들이 ```order by```가 **필수가 아닙니다**.
   * 각 raw 데이터를 읽어와 집계 / 변환하는 Batch들이 대부분이였습니다.
   * 즉 어떤 순서로 읽는게 중요하지 않고, 대량의 데이터를 가공하는게 중요했습니다.
   * ```order by```가 **pk외에 다른 기준으로 복잡하게** 사용해야 한다면 미리 만들어둔 PagingItemReader를 활용하기는 어렵습니다.
 
-QuerydslNoOffsetPagingItemReader 가 기존의 QuerydslPagingItemReader에 비해 추가되어야 할 점은 다음과 같습니다.
+위 조건이 필수는 아니나, 아무래도 표준 라이브러리를 만들때 **모든 경우의 수를 다 고려하면 작업량이 너무 많습니다**.  
+그래서 위 제한 조건을 고려해서 QuerydslNoOffsetPagingItemReader 가 기존의 QuerydslPagingItemReader에 비해 추가되어야 할 점은 다음과 같습니다.
 
 * 조회된 페이지의 **마지막 id 값을 캐시**
 * 캐시된 **마지막 id값을 다음 페이지 쿼리 조건문**에 추가
@@ -575,186 +574,232 @@ QuerydslNoOffsetPagingItemReader 가 기존의 QuerydslPagingItemReader에 비�
 
 * ```id``` 뿐만 아니라 다른 필드들도 ```order by``` 조건에 사용할 수 있어야 함
   * 모든 테이블의 PK 필드가 꼭 ```id```가 아닐 수 있음
+  * PK 필드 외에도 인덱스 필드를 사용할 수도 있음
   * ```order by```가 별도의 필드로 필요할 수도 있음
 * ```Long``` (```bigint```) 외에도 정렬 기준이 가능해야함
   * ```String``` (```varchar```), ```Integer``` (```int```) 등도 언제든 조건으로 사용할 수 있습니다.
 * 어떤 필드를 대상으로 사용할지 **문자열이 아닌, QClass 필드**로 직접 지정할 수 있어야 합니다
   * 문자열로 지정할 경우, **오타, 필드 변경**에 대해 컴파일 체크가 안되기 때문에 Querydsl의 QClass 필드로 지정합니다.
 
+위의 여러 기능들을 위해 2개의 클래스를 추가로 개발합니다.
 
-전체 코드는 아래와 같습니다.
+> 전체 코드는 [Github](https://github.com/jojoldu/spring-batch-querydsl/tree/master/spring-batch-querydsl-reader/src/main/java/org/springframework/batch/item/querydsl/reader)을 참고해주세요.
 
-```java
-import com.querydsl.jpa.impl.JPAQuery;
-import com.querydsl.jpa.impl.JPAQueryFactory;
-import org.springframework.batch.item.querydsl.reader.options.QuerydslNoOffsetOptions;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.CollectionUtils;
+* ```QuerydslNoOffsetOptions```
+  * 어떤 필드를 기준으로 사용할지 결정하는 클래스입니다.
+  * 
+  * 하위 구현체에서 구체적으로 String, Number 등의 
+* ```Expression```
+  * ```where```, ```order by``` 의 기준을 결정하는 클래스입니다. 
 
-import javax.persistence.EntityManagerFactory;
-import java.util.function.Function;
-
-public class QuerydslNoOffsetPagingItemReader<T> extends QuerydslPagingItemReader<T> {
-
-    private QuerydslNoOffsetOptions<T> options;
-
-    private QuerydslNoOffsetPagingItemReader() {
-        super();
-        setName(ClassUtils.getShortName(QuerydslNoOffsetPagingItemReader.class));
-    }
-
-    public QuerydslNoOffsetPagingItemReader(EntityManagerFactory entityManagerFactory,
-                                            int pageSize,
-                                            QuerydslNoOffsetOptions<T> options,
-                                            Function<JPAQueryFactory, JPAQuery<T>> queryFunction) {
-        this();
-        super.entityManagerFactory = entityManagerFactory;
-        super.queryFunction = queryFunction;
-        this.options = options;
-        setPageSize(pageSize);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    protected void doReadPage() {
-
-        clearIfTransacted();
-
-        JPAQuery<T> query = createQuery().limit(getPageSize());
-
-        initResults();
-
-        fetchQuery(query);
-
-        resetCurrentIdIfNotLastPage();
-    }
-
-    @Override
-    protected JPAQuery<T> createQuery() {
-        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
-        options.initFirstId(queryFunction.apply(queryFactory), getPage());
-
-        return options.createQuery(queryFunction.apply(queryFactory), getPage());
-    }
-
-    private void resetCurrentIdIfNotLastPage() {
-        if (isNotEmptyResults()) {
-            options.resetCurrentId(getLastItem());
-        }
-    }
-
-    // 조회결과가 Empty이면 results에 null이 담긴다
-    private boolean isNotEmptyResults() {
-        return !CollectionUtils.isEmpty(results) && results.get(0) != null;
-    }
-
-    private T getLastItem() {
-        return results.get(results.size() - 1);
-    }
-}
-```
 
 여기서 위에서 얘기한 조건 외에 한가지가 더 추가 되었는데요.  
-바로 ```initIdIfFirstPage()``` 입니다.
+바로 ```options.initFirstId()``` 입니다.
 
 ![initIdIfFirstPage](./images/initIdIfFirstPage.png)
 
 해당 메소드는 다음과 같은 역할을 합니다.  
-**첫번째 페이지 조회시 max()/min() 을 이용해 가장 첫번째 기준 ID를 가져옵니다**.  
+**첫번째 페이지 조회시** ```max()/min()``` 을 이용해 **첫번째 기준 ID**를 가져옵니다.  
   
 이 메소드가 추가된 이유는 2가지 문제를 회피하기 위함인데요.
 
-* 첫번째 페이지 조회시에도 정렬기준을 넣게 되면 클러스터 인덱스를 기준으로 **전체 정렬이 발생**하여 큰 성능 저하가 발생합니다.
+* 첫번째 페이지 조회시에도 정렬기준을 넣게 되면 ```where id``` 조건이 없어 **전체 정렬이 발생**하여 큰 성능 저하가 발생합니다.
   * 두번째 페이지부터는 id 조건문이 추가되어 빠릅니다.
-* 첫번째 페이지 호출시에는 정렬 기준을 제외한다면 **진짜 첫 페이지인지 확신할 수 없습니다**.
-  * 정렬 기준이 없기 때문에 ```order by id```가 추가되었을때와 다를수 있습니다. 
+* 성능 저하를 피하기 위해 정렬 기준을 제외한다면 **진짜 첫 페이지인지 확신할 수 없습니다**.
+  * **정렬 기준이 없기 때문에** ```order by id```가 추가되었을때와 **조회 결과가 다를수 있습니다**. 
 
 첫번째 ID값을 가져오는 것에 대한 성능 이슈는 생각보다 크지 않았습니다.  
-별도로 디스크를 읽어오는 작업 없이 id의 최대값/최소값을 가져오기 때문에 아주 빠른 속도로 가져옵니다.  
+별도로 디스크를 읽어오는 작업 없이 인덱스 필드의 최대값/최소값을 가져오기 때문에 아주 빠른 속도로 가져옵니다.  
 
   
 
-```java
-public interface BaseEntityId {
-    Long getId();
-}
-```
-
-
-* 오름차순: ```>```
-* 내림차순: ```<```
-
-```java
-public class QuerydslNoOffsetOptions {
-    private final NumberPath<Long> id;
-    private final Expression expression;
-
-    public QuerydslNoOffsetOptions(@Nonnull NumberPath<Long> id, @Nonnull Expression expression) {
-        this.id = id;
-        this.expression = expression;
-    }
-
-    public NumberExpression<Long> selectFirstId() {
-        if (expression.isAsc()) {
-            return id.min().add(-1);
-        }
-
-        return id.max().add(1);
-    }
-
-    public BooleanExpression whereExpression(Long compare) {
-        if (expression.isAsc()) {
-            return id.gt(compare);
-        }
-
-        return id.lt(compare);
-    }
-
-    public OrderSpecifier<Long> orderExpression() {
-        if (expression.isAsc()) {
-            return id.asc();
-        }
-
-        return id.desc();
-    }
-
-    public enum Expression {
-        ASC(WhereExpression.GT, OrderExpression.ASC),
-        DESC(WhereExpression.LT, OrderExpression.DESC);
-
-        private final WhereExpression where;
-        private final OrderExpression order;
-
-        Expression(WhereExpression where, OrderExpression order) {
-            this.where = where;
-            this.order = order;
-        }
-
-        public boolean isAsc() {
-            return this == ASC;
-        }
-    }
-
-    public enum WhereExpression {
-        GT, LT;
-    }
-
-    public enum OrderExpression {
-        ASC, DESC;
-    }
-}
-```
-
-
-> 당연한 이야기지만, 위와 같이 ```id``` 필드&컬럼을 사용하는 것외에 다른 방식이 필요하다면 **글의 서두에서 언급**했던 ```Repository```를 주입받아 사용하시면 됩니다.
-
 ### 2-1. 테스트코드로 검증
+
+Reader 테스트
+
+```java
+@Test
+public void path변수에서_필드명을_추출한다() throws Exception {
+    //given
+    String expected = "id";
+
+    //when
+    QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id,  Expression.ASC);
+
+    //then
+    assertThat(options.getFieldName()).isEqualTo(expected);
+}
+```
+
+```java
+@Test
+public void reader가_정상적으로_값을반환한다() throws Exception {
+    //given
+    LocalDate txDate = LocalDate.of(2020,10,12);
+    String name = "a";
+    int categoryNo = 1;
+    int expected1 = 1000;
+    int expected2 = 2000;
+    productRepository.save(new Product(name, expected1, categoryNo, txDate));
+    productRepository.save(new Product(name, expected2, categoryNo, txDate));
+
+    QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, Expression.ASC);
+
+    int chunkSize = 1;
+
+    QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                    .selectFrom(product)
+                    .where(product.createDate.eq(txDate)));
+
+    reader.open(new ExecutionContext());
+
+    //when
+    Product read1 = reader.read();
+    Product read2 = reader.read();
+    Product read3 = reader.read();
+
+    //then
+    assertThat(read1.getPrice()).isEqualTo(expected1);
+    assertThat(read2.getPrice()).isEqualTo(expected2);
+    assertThat(read3).isNull();
+}
+```
+
+```java
+@Test
+public void reader가_역순으로_값을반환한다() throws Exception {
+    //given
+    LocalDate txDate = LocalDate.of(2020,10,12);
+    String name = "a";
+    int categoryNo = 1;
+    int expected1 = 1000;
+    int expected2 = 2000;
+    productRepository.save(new Product(name, expected1, categoryNo, txDate));
+    productRepository.save(new Product(name, expected2, categoryNo, txDate));
+
+    QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, Expression.DESC);
+
+    int chunkSize = 1;
+
+    QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+            .selectFrom(product)
+            .where(product.createDate.eq(txDate)));
+
+    reader.open(new ExecutionContext());
+
+    //when
+    Product read1 = reader.read();
+    Product read2 = reader.read();
+    Product read3 = reader.read();
+
+    //then
+    assertThat(read1.getPrice()).isEqualTo(expected2);
+    assertThat(read2.getPrice()).isEqualTo(expected1);
+    assertThat(read3).isNull();
+}
+```
+
+```java
+@Test
+public void 빈값일경우_null이_반환된다() throws Exception {
+    //given
+    LocalDate txDate = LocalDate.of(2020,10,12);
+
+    QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, Expression.ASC);
+
+    int chunkSize = 1;
+
+    QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+            .selectFrom(product)
+            .where(product.createDate.eq(txDate)));
+
+    reader.open(new ExecutionContext());
+
+    //when
+    Product read1 = reader.read();
+
+    //then
+    assertThat(read1).isNull();
+}
+```
+```java
+@Test
+public void pageSize에_맞게_값을반환한다() throws Exception {
+    //given
+    LocalDate txDate = LocalDate.of(2020,10,12);
+    String name = "a";
+    int categoryNo = 1;
+    int expected1 = 1000;
+    int expected2 = 2000;
+    int expected3 = 2000;
+    productRepository.save(new Product(name, expected1, categoryNo, txDate));
+    productRepository.save(new Product(name, expected2, categoryNo, txDate));
+    productRepository.save(new Product(name, expected3, categoryNo, txDate));
+
+    QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, Expression.ASC);
+
+    int chunkSize = 2;
+
+    QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+            .selectFrom(product)
+            .where(product.createDate.eq(txDate)));
+
+    reader.open(new ExecutionContext());
+
+    //when
+    Product read1 = reader.read();
+    Product read2 = reader.read();
+    Product read3 = reader.read();
+    Product read4 = reader.read();
+
+    //then
+    assertThat(read1.getPrice()).isEqualTo(expected1);
+    assertThat(read2.getPrice()).isEqualTo(expected2);
+    assertThat(read3.getPrice()).isEqualTo(expected3);
+    assertThat(read4).isNull();
+}
+```
+
+```java
+@Test
+public void 문자열필드도_nooffset이_적용된다() throws Exception {
+    //given
+    LocalDate txDate = LocalDate.of(2020,10,12);
+    int categoryNo = 1;
+    long price = 1000;
+    String expected1 = "a";
+    String expected2 = "b";
+    productRepository.save(new Product(expected1, price, categoryNo, txDate));
+    productRepository.save(new Product(expected2, price, categoryNo, txDate));
+
+    QuerydslNoOffsetStringOptions<Product> options = new QuerydslNoOffsetStringOptions<>(product.name, Expression.DESC);
+
+    int chunkSize = 1;
+
+    QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+            .selectFrom(product)
+            .where(product.createDate.eq(txDate)));
+
+    reader.open(new ExecutionContext());
+
+    //when
+    Product read1 = reader.read();
+    Product read2 = reader.read();
+    Product read3 = reader.read();
+
+    //then
+    assertThat(read1.getName()).isEqualTo(expected2);
+    assertThat(read2.getName()).isEqualTo(expected1);
+    assertThat(read3).isNull();
+}
+```
 
 ### 2-2. 사용 방법
 
+
 ## 3. QuerydslNoOffsetPagingItemReader 성능 비교
 
-> 꼭 QuerydslNoOffsetPagingItemReader를 썼다기보다는, Offset을 제거한 방식이면 뭐든지 해당되겠습니다.
+> 꼭 QuerydslNoOffsetPagingItemReader를 썼다기보다는, **Offset을 제거한 방식이면 뭐든지 해당**되겠습니다.
 
 ### 3-1. 첫번째 Batch Job
 
