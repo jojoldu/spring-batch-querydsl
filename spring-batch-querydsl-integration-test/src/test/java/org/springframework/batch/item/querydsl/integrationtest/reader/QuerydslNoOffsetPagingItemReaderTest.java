@@ -87,18 +87,6 @@ public class QuerydslNoOffsetPagingItemReaderTest {
     }
 
     @Test
-    public void path변수에서_필드명을_추출한다() throws Exception {
-        //given
-        String expected = "id";
-
-        //when
-        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id,  Expression.ASC);
-
-        //then
-        assertThat(options.getFieldName()).isEqualTo(expected);
-    }
-
-    @Test
     public void reader가_정상적으로_값을반환한다() throws Exception {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);

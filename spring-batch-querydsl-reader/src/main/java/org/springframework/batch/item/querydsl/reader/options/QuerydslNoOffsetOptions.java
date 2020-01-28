@@ -17,7 +17,8 @@ public abstract class QuerydslNoOffsetOptions<T> {
 
     public QuerydslNoOffsetOptions(@Nonnull Path field,
                                    @Nonnull Expression expression) {
-        this.fieldName = field.toString().split("\\.")[1];
+        String[] qField = field.toString().split("\\.");
+        this.fieldName = qField[qField.length-1];
         this.expression = expression;
 
         if (logger.isDebugEnabled()) {
