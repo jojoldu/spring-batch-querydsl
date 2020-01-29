@@ -32,7 +32,6 @@ public class QuerydslNoOffsetStringOptions<T> extends QuerydslNoOffsetOptions <T
                 logger.debug("First Current Id " + currentId);
             }
         }
-
     }
 
     private StringExpression selectFirstId() {

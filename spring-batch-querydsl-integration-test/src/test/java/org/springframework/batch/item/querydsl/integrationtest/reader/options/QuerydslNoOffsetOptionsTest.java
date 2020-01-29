@@ -5,7 +5,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.batch.item.querydsl.integrationtest.TestBatchConfig;
 import org.springframework.batch.item.querydsl.integrationtest.entity.Product;
-import org.springframework.batch.item.querydsl.integrationtest.entity.QProduct;
 import org.springframework.batch.item.querydsl.integrationtest.job.QuerydslNoOffsetPagingItemReaderConfiguration;
 import org.springframework.batch.item.querydsl.reader.expression.Expression;
 import org.springframework.batch.item.querydsl.reader.options.QuerydslNoOffsetNumberOptions;
@@ -37,16 +36,4 @@ public class QuerydslNoOffsetOptionsTest {
         assertThat(options.getFieldName()).isEqualTo(expected);
     }
 
-    @Test
-    public void QClass포함해서_path변수에서_필드명을_추출한다() throws Exception {
-        //given
-        String expected = "id";
-        NumberPath<Long> path = QProduct.product.id;
-
-        //when
-        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(path,  Expression.ASC);
-
-        //then
-        assertThat(options.getFieldName()).isEqualTo(expected);
-    }
 }
