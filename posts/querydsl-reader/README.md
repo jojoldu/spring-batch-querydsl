@@ -148,21 +148,6 @@ Spring Batch의 구조를 보면서 확인해보겠습니다.
 
 
 ```java
-import com.querydsl.jpa.impl.JPAQuery;
-import com.querydsl.jpa.impl.JPAQueryFactory;
-import org.springframework.batch.item.database.AbstractPagingItemReader;
-import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.CollectionUtils;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Function;
-
 public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
 
     protected final Map<String, Object> jpaPropertyMap = new HashMap<>();
@@ -286,17 +271,16 @@ offset과 limit은 부모 클래스인 AbstractPagingItemReader 의 ```getPage()
 
 해당 부분을 QuerydslPagingItemReader에서 제거한 이유는 ```hibernate.default_batch_fetch_size```이 정상적으로 작동하지 않기 때문입니다.  
 
-> hibernate.default_batch_fetch_size 옵션이 처음이시라면 어떤 옵션인지에 대한 내용은 [이전에 작성한 포스팅](https://jojoldu.tistory.com/457)을 참고해보세요. 
-
-> 해당 옵션이 작동되지 않는 이유에 대해서는 [이 포스팅](https://jojoldu.tistory.com/414)을 참고해주세요.
+> hibernate.default_batch_fetch_size 옵션이 처음이시라면 어떤 옵션인지에 대한 내용은 [이전에 작성한 포스팅](https://jojoldu.tistory.com/457)을 참고해보세요.
 
 대량의 데이터에서 주로 사용되는 배치 애플리케이션에서 JPA의 N+1 문제는 심각한 성능 저하를 일으키기 때문에 해당 부분을 제거했습니다.  
   
 그럼 새롭게 만든 이 ItemReader가 제대로 작동하는지 테스트 코드로 검증해보겠습니다.
 
+> 해당 옵션이 작동되지 않는 이유에 대해서는 [이 포스팅](https://jojoldu.tistory.com/414)을 참고해주세요.  
 > 위 이슈에 대해서는 Spring Batch 팀에 [PR](https://github.com/spring-projects/spring-batch/pull/713)을 보낸 상황입니다.
 
-### 1-1. 테스트코드로 검증
+### 1-1. 테스트 코드로 검증
 
 먼저 페이지 사이즈에 따라 데이터가 정상적으로 반환되는지 테스트 해보겠습니다.
 
@@ -487,7 +471,9 @@ QuerydslPagingItemReader의 구현이 모두 확인 되었으니 다음으로 �
 ## 2. QuerydslNoOffsetPagingItemReader
 
 많은 분들이 아시겠지만, MySQL 은 특성상 **페이징이 뒤로 갈수록 느려집니다**.  
-  
+
+> 꼭 MySQL만 그렇지는 않고, 많은 RDBMS가 비슷하게 작동됩니다.
+
 즉, 아래와 같은 형태의 쿼리는 **offset 값이 커질수록 느리다**는 의미입니다.
 
 ```sql
@@ -566,8 +552,19 @@ offset 페이징 쿼리가 뒤로갈수록 느린 이유는 결국 **앞에서 �
   * ```order by```가 **pk외에 다른 기준으로 복잡하게** 사용해야 한다면 QuerydslNoOffsetPagingItemReader를 활용하기는 어렵습니다.
 
 위 조건이 필수는 아니나, 아무래도 표준 라이브러리를 만들때 **모든 경우의 수를 다 고려하면 작업량이 너무 많습니다**.  
-그래서 위 제한 조건을 고려해서 QuerydslNoOffsetPagingItemReader 가 기존의 QuerydslPagingItemReader에 비해 추가되어야 할 점은 다음과 같습니다.
+그래서 위 조건으로 범위를 제한하고나서 작업을 진행합니다.  
+  
+만들어야할 기능을 한번 정리해보면 다음과 같습니다.  
+  
+기존 페이징 쿼리에서 아래 쿼리를 **자동으로 추가**해주는 것입니다.
 
+```sql
+AND id < 마지막조회ID # 직전 조회 결과의 마지막 id
+ORDER BY id DESC
+LIMIT 페이지사이즈
+```
+
+* ```offset``` 이 제거된 ```limit``` 쿼리
 * 조회된 페이지의 **마지막 id 값을 캐시**
 * 캐시된 **마지막 id값을 다음 페이지 쿼리 조건문**에 추가
 * **정렬 기준에 따라** 조회 조건이 마지막 id가 포함되도록 자동 변경
@@ -598,7 +595,7 @@ offset 페이징 쿼리가 뒤로갈수록 느린 이유는 결국 **앞에서 �
 
 > 전체 코드는 [Github](https://github.com/jojoldu/spring-batch-querydsl/tree/master/spring-batch-querydsl-reader/src/main/java/org/springframework/batch/item/querydsl/reader)을 참고해주세요.
 
-여기서 위에서 얘기한 조건 외에 한가지가 더 추가 되었는데요.  
+여기서 위에서 얘기한 코드 외에 한가지가 더 추가 되었는데요.  
 바로 ```options.initFirstId()``` 입니다.
 
 ![initFirstId](./images/initFirstId.png)
@@ -627,23 +624,90 @@ private NumberExpression<N> selectFirstId() {
 ```
 
 해당 메소드는 다음과 같은 역할을 합니다.  
-**첫번째 페이지 조회시** ```max()/min()``` 을 이용해 **첫번째 기준 ID**를 가져옵니다.  
+**첫번째 페이지 조회가 필요할때** ```max()/min()``` 을 이용해 **첫번째 기준 ID**를 조건으로 추가해줍니다.  
   
 이 메소드가 추가된 이유는 2가지 문제를 회피하기 위함인데요.
 
 * 첫번째 페이지 조회시에도 정렬기준을 넣게 되면 ```where id``` 조건이 없어 **전체 정렬이 발생**하여 큰 성능 저하가 발생합니다.
   * 두번째 페이지부터는 id 조건문이 추가되어 빠릅니다.
 * 성능 저하를 피하기 위해 정렬 기준을 제외한다면 **진짜 첫 페이지인지 확신할 수 없습니다**.
-  * **정렬 기준이 없기 때문에** ```order by id```가 추가되었을때와 **조회 결과가 다를수 있습니다**. 
+  * **정렬 기준이 없기 때문에** ```order by id```가 추가되었을때와 **조회 결과가 다를수 있습니다**.
 
-첫번째 ID값을 가져오는 것에 대한 성능 이슈는 생각보다 크지 않았습니다.  
-별도로 디스크를 읽어오는 작업 없이 인덱스 필드의 최대값/최소값을 가져오기 때문에 아주 빠른 속도로 가져옵니다.  
-
+다행히 첫번째 ID값을 가져오는 것에 대한 성능 이슈는 생각보다 크지 않았습니다.  
+별도로 디스크를 읽어오는 작업 없이 인덱스 필드의 최대값/최소값을 가져오기 때문에 아주 빠른 속도로 가져오기 때문입니다.  
   
+최종적으로 정리된 코드는 다음과 같습니다.
 
-### 2-1. 테스트코드로 검증
+```java
+public class QuerydslNoOffsetPagingItemReader<T> extends QuerydslPagingItemReader<T> {
 
-Reader 테스트
+    private QuerydslNoOffsetOptions<T> options;
+
+    private QuerydslNoOffsetPagingItemReader() {
+        super();
+        setName(ClassUtils.getShortName(QuerydslNoOffsetPagingItemReader.class));
+    }
+
+    public QuerydslNoOffsetPagingItemReader(EntityManagerFactory entityManagerFactory,
+                                            int pageSize,
+                                            QuerydslNoOffsetOptions<T> options,
+                                            Function<JPAQueryFactory, JPAQuery<T>> queryFunction) {
+        this();
+        super.entityManagerFactory = entityManagerFactory;
+        super.queryFunction = queryFunction;
+        this.options = options;
+        setPageSize(pageSize);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    protected void doReadPage() {
+
+        clearIfTransacted();
+
+        JPAQuery<T> query = createQuery().limit(getPageSize());
+
+        initResults();
+
+        fetchQuery(query);
+
+        resetCurrentIdIfNotLastPage(); // 조회된 페이지의 마지막 ID 캐시
+    }
+
+    @Override
+    protected JPAQuery<T> createQuery() {
+        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
+        options.initFirstId(queryFunction.apply(queryFactory), getPage()); // 제일 첫번째 페이징시 시작해야할 ID 찾기
+
+        return options.createQuery(queryFunction.apply(queryFactory), getPage()); // 캐시된 ID를 기준으로 페이징 쿼리 생성
+    }
+
+    private void resetCurrentIdIfNotLastPage() {
+        if (isNotEmptyResults()) {
+            options.resetCurrentId(getLastItem());
+        }
+    }
+
+    // 조회결과가 Empty이면 results에 null이 담긴다
+    private boolean isNotEmptyResults() {
+        return !CollectionUtils.isEmpty(results) && results.get(0) != null;
+    }
+
+    private T getLastItem() {
+        return results.get(results.size() - 1);
+    }
+}
+```
+
+그리고 Reader를 포함한 프로젝트 전체 구조는 다음처럼 정리 됩니다.
+
+![classes](./images/classes.png)
+
+자 그럼 테스트 코드로 한번 ```QuerydslNoOffsetPagingItemReader``` 기능을 검증해보겠습니다.  
+
+### 2-1. 테스트 코드로 검증
+
+먼저 ```QuerydslNoOffsetOptions``` 이 필드명을 잘 찾아내는지 검증합니다.
 
 ```java
 @Test
@@ -658,6 +722,10 @@ public void path변수에서_필드명을_추출한다() throws Exception {
     assertThat(options.getFieldName()).isEqualTo(expected);
 }
 ```
+
+![nooffsetTest1](./images/nooffsetTest1.png)
+
+기본적인 기능도 확인합니다.
 
 ```java
 @Test
@@ -693,100 +761,7 @@ public void reader가_정상적으로_값을반환한다() throws Exception {
 }
 ```
 
-```java
-@Test
-public void reader가_역순으로_값을반환한다() throws Exception {
-    //given
-    LocalDate txDate = LocalDate.of(2020,10,12);
-    String name = "a";
-    int categoryNo = 1;
-    int expected1 = 1000;
-    int expected2 = 2000;
-    productRepository.save(new Product(name, expected1, categoryNo, txDate));
-    productRepository.save(new Product(name, expected2, categoryNo, txDate));
-
-    QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, Expression.DESC);
-
-    int chunkSize = 1;
-
-    QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
-            .selectFrom(product)
-            .where(product.createDate.eq(txDate)));
-
-    reader.open(new ExecutionContext());
-
-    //when
-    Product read1 = reader.read();
-    Product read2 = reader.read();
-    Product read3 = reader.read();
-
-    //then
-    assertThat(read1.getPrice()).isEqualTo(expected2);
-    assertThat(read2.getPrice()).isEqualTo(expected1);
-    assertThat(read3).isNull();
-}
-```
-
-```java
-@Test
-public void 빈값일경우_null이_반환된다() throws Exception {
-    //given
-    LocalDate txDate = LocalDate.of(2020,10,12);
-
-    QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, Expression.ASC);
-
-    int chunkSize = 1;
-
-    QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
-            .selectFrom(product)
-            .where(product.createDate.eq(txDate)));
-
-    reader.open(new ExecutionContext());
-
-    //when
-    Product read1 = reader.read();
-
-    //then
-    assertThat(read1).isNull();
-}
-```
-```java
-@Test
-public void pageSize에_맞게_값을반환한다() throws Exception {
-    //given
-    LocalDate txDate = LocalDate.of(2020,10,12);
-    String name = "a";
-    int categoryNo = 1;
-    int expected1 = 1000;
-    int expected2 = 2000;
-    int expected3 = 2000;
-    productRepository.save(new Product(name, expected1, categoryNo, txDate));
-    productRepository.save(new Product(name, expected2, categoryNo, txDate));
-    productRepository.save(new Product(name, expected3, categoryNo, txDate));
-
-    QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, Expression.ASC);
-
-    int chunkSize = 2;
-
-    QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
-            .selectFrom(product)
-            .where(product.createDate.eq(txDate)));
-
-    reader.open(new ExecutionContext());
-
-    //when
-    Product read1 = reader.read();
-    Product read2 = reader.read();
-    Product read3 = reader.read();
-    Product read4 = reader.read();
-
-    //then
-    assertThat(read1.getPrice()).isEqualTo(expected1);
-    assertThat(read2.getPrice()).isEqualTo(expected2);
-    assertThat(read3.getPrice()).isEqualTo(expected3);
-    assertThat(read4).isNull();
-}
-```
+Number 타입외에 문자열 타입도 정상적으로 되는지 검증합니다.
 
 ```java
 @Test
@@ -822,12 +797,125 @@ public void 문자열필드도_nooffset이_적용된다() throws Exception {
 }
 ```
 
+![nooffsetTest2](./images/nooffsetTest2.png)
+
+> 이외 다양한 케이스를 검증하였습니다.  
+> 나머지 테스트 코드는 [Github](https://github.com/jojoldu/spring-batch-querydsl/tree/master/spring-batch-querydsl-integration-test/src/test/java/org/springframework/batch/item/querydsl/integrationtest) 에서 확인해주세요.
+
+Reader 구현이 끝났으니 직접 Batch Job을 만들어 사용해보겠습니다.
+
 ### 2-2. 사용 방법
 
+이렇게 만든 QuerydslNoOffsetPagingItemReader는 배치 Job에선 아래와 같이 사용할 수 있습니다.
+
+![nooffsetReaderSample](./images/nooffsetReaderSample.png)
+
+전체 Job 코드는 아래와 같습니다.
+
+```java
+@Slf4j // log 사용을 위한 lombok 어노테이션
+@RequiredArgsConstructor // 생성자 DI를 위한 lombok 어노테이션
+@Configuration
+public class QuerydslNoOffsetPagingItemReaderConfiguration {
+    public static final String JOB_NAME = "querydslNoOffsetPagingReaderJob";
+
+    private final JobBuilderFactory jobBuilderFactory;
+    private final StepBuilderFactory stepBuilderFactory;
+    private final EntityManagerFactory emf;
+    private final QuerydslNoOffsetPagingItemReaderJobParameter jobParameter;
+
+    private int chunkSize;
+
+    @Value("${chunkSize:1000}")
+    public void setChunkSize(int chunkSize) {
+        this.chunkSize = chunkSize;
+    }
+
+    @Bean
+    @JobScope
+    public QuerydslNoOffsetPagingItemReaderJobParameter jobParameter() {
+        return new QuerydslNoOffsetPagingItemReaderJobParameter();
+    }
+
+    @Bean
+    public Job job() {
+        return jobBuilderFactory.get(JOB_NAME)
+                .start(step())
+                .build();
+    }
+
+    @Bean
+    public Step step() {
+        return stepBuilderFactory.get("querydslNoOffsetPagingReaderStep")
+                .<Product, ProductBackup>chunk(chunkSize)
+                .reader(reader())
+                .processor(processor())
+                .writer(writer())
+                .build();
+    }
+
+    @Bean
+    public QuerydslNoOffsetPagingItemReader<Product> reader() {
+        // 1. No Offset 옵션
+        QuerydslNoOffsetNumberOptions<Product, Long> options =
+                new QuerydslNoOffsetNumberOptions<>(product.id, Expression.ASC);
+
+        // 2. Querydsl
+        return new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                .selectFrom(product)
+                .where(product.createDate.eq(jobParameter.getTxDate())));
+    }
+
+    private ItemProcessor<Product, ProductBackup> processor() {
+        return ProductBackup::new;
+    }
+
+    @Bean
+    public JpaItemWriter<ProductBackup> writer() {
+        return new JpaItemWriterBuilder<ProductBackup>()
+                .entityManagerFactory(emf)
+                .build();
+    }
+}
+```
+
+해당 Job 역시 테스트 코드로 검증해봅니다.
+
+```java
+@Test
+public void Product가_ProductBackup으로_이관된다() throws Exception {
+    //given
+    LocalDate txDate = LocalDate.of(2020,10,12);
+    String name = "a";
+    int categoryNo = 1;
+    int expected1 = 1000;
+    int expected2 = 2000;
+    productRepository.save(new Product(name, expected1, categoryNo, txDate));
+    productRepository.save(new Product(name, expected2, categoryNo, txDate));
+
+    JobParameters jobParameters = new JobParametersBuilder()
+            .addString("txDate", txDate.format(FORMATTER))
+            .toJobParameters();
+
+    //when
+    JobExecution jobExecution = jobLauncherTestUtils.launchJob(jobParameters);
+
+    //then
+    assertThat(jobExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+    List<ProductBackup> backups = productBackupRepository.findAll();
+    assertThat(backups.size()).isEqualTo(2);
+}
+```
+
+![pagingTest4](./images/pagingTest4.png)
+
+Batch Job 역시 정상적으로 수행되는게 확인되었습니다!
 
 ## 3. QuerydslNoOffsetPagingItemReader 성능 비교
 
-> 꼭 QuerydslNoOffsetPagingItemReader를 썼다기보다는, **Offset을 제거한 방식이면 뭐든지 해당**되겠습니다.
+이렇게 만들어진 QuerydslNoOffsetPagingItemReader는 기존 보다 얼마나 빠르게 작동될까요?
+
+> 꼭 QuerydslNoOffsetPagingItemReader가 아니더라도 **Offset을 제거한 방식이면 뭐든지 해당**되겠습니다.
 
 ### 3-1. 첫번째 Batch Job
 
