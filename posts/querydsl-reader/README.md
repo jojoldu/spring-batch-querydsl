@@ -95,7 +95,8 @@ repository의 Querydsl 부분을 제외하고는 **대부분은 비슷한 코드
 결과적으로 JpaPagingItemReader, HibernatePagingItemReader에 비해 Querydsl을 사용하는 방식은 불편한 점이 있다고 판단되었습니다.  
 
 > 물론 Querdsl을 포기하고 JpaPagingItemReader를 이용해도 됩니다만, 그렇게 되면 Querydsl의 **타입 안정성, 자동완성, 컴파일 단계 문법체크, 공백이슈**를 지원받을 수가 없습니다.  
-> 100개가 넘는 테이블, 수십개의 배치를 개발/운영하는 입장에서 이걸 포기할 순 없었습니다.
+> 더군다나 페이징 성능 향상을 위한 Offset이 제거된 페이징 처리는 JpaPagingItemReader에서도 불가능하여 별도의 Reader를 만들어야만 합니다.  
+> 100개가 넘는 테이블, 수십개의 배치를 개발/운영하는 입장에서 이걸 포기할 순 없었습니다.  
   
 그래서 팀에서는 **Querydsl의 쿼리에만 집중**할 수 있도록  QuerydslPagingItemReader를 개발하게 되었습니다.  
   
@@ -128,8 +129,8 @@ Spring Batch의 구조를 보면서 확인해보겠습니다.
 * ```doReadPage()```
   * ```page``` (offset) 와 ```pageSize``` (limit) 을 이용해 데이터를 가져옵니다.
 * ```read()```
-  * ```doReadpage()``` 로 가져온 데이터들을 **하나씩 processor로 전달**합니다.
-  * 만약 ```doReadpage()```로 가져온 데이터를 모두 processor에 전달했다면, **다음 페이지 데이터들을 가져오도록** ```doReadPage()```를 호출합니다.
+  * ```doReadPage()``` 로 가져온 데이터들을 **하나씩 processor로 전달**합니다.
+  * 만약 ```doReadPage()```로 가져온 데이터를 모두 processor에 전달했다면, **다음 페이지 데이터들을 가져오도록** ```doReadPage()```를 호출합니다.
 
 여기서 **JPQL이 실행되는 부분**은 ```doReadPage()``` 입니다.  
 즉, ```doReadPage()``` 에서 쿼리가 수행되는 부분을 Querydsl의 쿼리로 변경하면 되는것이죠.  
