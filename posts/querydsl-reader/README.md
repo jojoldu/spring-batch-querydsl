@@ -244,13 +244,13 @@ public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
 
 > 후술할 Querydsl**NoOffset**PagingItemReader에서 QuerydslPagingItemReader를 **상속**하기 때문에 대부분의 메소드와 필드는 ```protected``` 입니다.
 
-대부분의 코드가 기존 JpaPagingItemReader에 있던 코드라 달라진 부분들만 보시면 될것 같습니다.  
+대부분의 코드가 기존 JpaPagingItemReader에 있던 코드라 달라진 부분들만 보시면 될 것 같습니다.  
   
 먼저 **람다 표현식**을 사용할 수 있도록 ```Function<JPAQueryFactory, JPAQuery<T>> queryFunction``` 가 생성자 인자로 추가되었습니다.
 
 ![pagingReader1](./images/pagingReader1.png)
 
-Querydsl의 쿼리를 람다표현식으로 받도록 하여 **매번 새로운 Reader를 만들 필요 없이 Job 클래스에서 바로 Reader를 생성**할 수 있게 됩니다.
+Querydsl의 쿼리를 람다표현식으로 받도록 하여 **매번 새로운 Reader를 만들 필요 없이** Job 클래스에서 바로 Reader를 생성할 수 있게 됩니다.
 
 ![pagingReader2](./images/pagingReader2.png)
 
@@ -262,9 +262,10 @@ createQuery 메소드는 생성자 인자로 받은 ```queryFunction```을 사�
 
 ![pagingReader3](./images/pagingReader3.png)
 
-offset과 limit은 부모 클래스인 AbstractPagingItemReader 의 ```getPage()``` 와 ```getPageSize()```를 사용하여 최대한 변경 요소를 줄입니다.  
+offset과 limit은 부모 클래스인 AbstractPagingItemReader 의 ```getPage()``` 와 ```getPageSize()```를 사용하여 **최대한 변경 요소를 줄입니다**.  
   
-코드를 보시면 JpaPagingItemReader의 ```doReadPage()``` 에서 ```createQuery``` 외에 다른 부분이 있다는 것을 알 수 있으실텐데요.  
+이정도의 변경만 하여도 정상적으로 Querydsl을 사용할 수 있습니다만, 추가로 하나의 변경 사항이 더 있습니다.  
+코드를 자세히 보신 분들이라면 JpaPagingItemReader의 ```doReadPage()``` 에서 ```createQuery``` 외에 다른 부분이 있다는 것을 알 수 있으실텐데요.  
   
 바로 ```EntityTransaction``` 부분입니다.
 
@@ -579,10 +580,10 @@ LIMIT 페이지사이즈
   * PK 필드 외에도 인덱스 필드를 사용할 수도 있음
   * ```order by```가 별도의 필드로 필요할 수도 있음
 * ```Long``` (```bigint```) 외에도 정렬 기준이 가능해야함
-  * ```String``` (```varchar```), ```Integer``` (```int```) 등도 언제든 조건으로 사용할 수 있습니다.
-* 어떤 필드가 대상일지 **문자열이 아닌, QClass 필드**로 직접 지정할 수 있어야 합니다
-  * 즉, ```"id"``` 가 아닌 ```QProduct.product.id``` 가 되어야함을 의미합니다.
-  * 문자열로 지정할 경우, **오타, 필드 변경**에 대해 컴파일 체크가 안되기 때문에 Querydsl의 QClass 필드로 지정합니다.
+  * ```String``` (```varchar```), ```Integer``` (```int```) 등도 언제든 조건으로 사용할 수 있음
+* 어떤 필드가 대상일지 **문자열이 아닌, QClass 필드**로 직접 지정할 수 있어야 함
+  * 즉, ```"id"``` 가 아닌 ```QProduct.product.id``` 가 되어야함을 의미
+  * 문자열로 지정할 경우, **오타, 필드 변경**에 대해 컴파일 체크가 안되기 때문에 Querydsl의 QClass 필드로 지정
 
 위의 여러 기능들을 위해 ItemReader외에 2개의 클래스를 추가로 개발합니다.
 
@@ -939,3 +940,9 @@ Batch Job 역시 정상적으로 수행되는게 확인되었습니다!
 ![result2-1](./images/result2-1.png)
 
 ![result2-2](./images/result2-2.png)
+
+## 4. 마무리
+
+### 4-1. Jitpack으로 의존성 추가하기
+
+
