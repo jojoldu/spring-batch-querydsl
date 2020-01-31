@@ -1,7 +1,7 @@
 package org.springframework.batch.item.querydsl.reader.expression;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.core.types.dsl.NumberPath;
+import com.querydsl.core.types.dsl.StringPath;
 
 /**
  * Created by jojoldu@gmail.com on 23/01/2020
@@ -9,8 +9,8 @@ import com.querydsl.core.types.dsl.NumberPath;
  * Github : http://github.com/jojoldu
  */
 @FunctionalInterface
-public interface NumberWhereFunction<N extends Number & Comparable<?>> {
+public interface WhereStringFunction {
 
-    BooleanExpression apply(NumberPath<N> id, int page, N currentId);
+    BooleanExpression apply(StringPath id, int page, String currentId);
 
 }

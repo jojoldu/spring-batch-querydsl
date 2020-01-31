@@ -9,6 +9,11 @@ import com.querydsl.core.types.dsl.StringPath;
  * Blog : http://jojoldu.tistory.com
  * Github : http://github.com/jojoldu
  */
+
+/**
+ * 첫페이지 조회시에는 <=, >=
+ * 두번째 페이지부터는 <, >
+ */
 public enum WhereExpression {
     GT(
             (id, page, currentId) -> page == 0? id.goe(currentId): id.gt(currentId),
@@ -18,10 +23,10 @@ public enum WhereExpression {
             (id, page, currentId) -> page == 0? id.loe(currentId): id.lt(currentId)
     );
 
-    private final StringWhereFunction string;
-    private final NumberWhereFunction number;
+    private final WhereStringFunction string;
+    private final WhereNumberFunction number;
 
-    WhereExpression(StringWhereFunction string, NumberWhereFunction number) {
+    WhereExpression(WhereStringFunction string, WhereNumberFunction number) {
         this.string = string;
         this.number = number;
     }
