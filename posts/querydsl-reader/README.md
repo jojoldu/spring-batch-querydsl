@@ -569,7 +569,7 @@ LIMIT 페이지사이즈
 * ```offset``` 이 제거된 ```limit``` 쿼리
 * 조회된 페이지의 **마지막 id 값을 캐시**
 * 캐시된 **마지막 id값을 다음 페이지 쿼리 조건문**에 추가
-* **정렬 기준에 따라** 조회 조건이 마지막 id가 포함되도록 자동 변경
+* **정렬 기준에 따라** 조회 조건에 마지막 id의 조건이 자동 포함
   * ```asc```: ```id > 마지막 id```
   * ```desc```: ```id < 마지막 id```
 
@@ -915,16 +915,20 @@ Batch Job 역시 정상적으로 수행되는게 확인되었습니다!
 
 ## 3. QuerydslNoOffsetPagingItemReader 성능 비교
 
-이렇게 만들어진 QuerydslNoOffsetPagingItemReader는 기존 보다 얼마나 빠르게 작동될까요?
+이렇게 만들어진 ```QuerydslNoOffsetPagingItemReader```는 기존 보다 얼마나 빠르게 작동될까요?
 
-> 꼭 QuerydslNoOffsetPagingItemReader가 아니더라도 **Offset을 제거한 방식이면 뭐든지 해당**되겠습니다.
+> 꼭 ```QuerydslNoOffsetPagingItemReader```가 아니더라도 **Offset을 제거한 방식이면 뭐든지 해당**되겠습니다.
+
+기존에 작동되던 배치 중 2개를 ```QuerydslNoOffsetPagingItemReader``` 로 변경해서 비교해 보았습니다.
 
 ### 3-1. 첫번째 Batch Job
+
+Reader에서 조회되는 데이터가 869,000개 (페이지수는 869개) 인 배치의 비교입니다.
 
 |                                  | 총 수행 시간 | 마지막 페이지 읽기 시간 |
 |----------------------------------|--------------|-------------------------|
 | QuerydslPagingItemReader         | 21분         | 2.4초                   |
-| QuerydslNoOffsetPagingItemReader | 4분 36초     | 0.03초                  |
+| QuerydslNoOffsetPagingItemReader | <b>4분 36초</b>     | <b>0.03초</b>                  |
 
 ![result1-1](./images/result1-1.png)
 
@@ -932,17 +936,44 @@ Batch Job 역시 정상적으로 수행되는게 확인되었습니다!
 
 ### 3-2. 두번째 Batch Job
 
+Reader에서 조회되는 데이터가 1,189,000개 (페이지수는 1,189개) 인 배치의 비교입니다.
+
 |                                  | 총 수행 시간 | 마지막 페이지 읽기 시간 |
 |----------------------------------|--------------|-------------------------|
 | QuerydslPagingItemReader         | 55분         | 5초                     |
-| QuerydslNoOffsetPagingItemReader | 2분 27초     | 0.8초                   |
+| QuerydslNoOffsetPagingItemReader | <b>2분 27초</b>     | <b>0.08초</b>                   |
 
 ![result2-1](./images/result2-1.png)
 
 ![result2-2](./images/result2-2.png)
 
+2개의 Batch Job 을 확인해보면 **마지막 페이지에 가서도 전혀 느려지지 않는** 것을 확인할 수 있습니다.
+
 ## 4. 마무리
 
-### 4-1. Jitpack으로 의존성 추가하기
+2개의 QuerydslItemReader가 추가되면서 기존의 Spring Batch Job들에도 많은 변화가 생겼습니다.
+
+* 복잡한 정렬 기준이 필요한 경우엔 ```QuerydslPagingItemReader```
+* 복잡한 정렬 기준이 **아닌** 경우엔 ```QuerydslNoOffsetPagingItemReader```
+
+이 2개로 대응하기 어려운 상황이 발생한다면 그땐 기존처럼 ```Repository```를 주입받는 별도의 ItemReader를 생성하면 됩니다.  
+  
+
+
+
+### 번외. Jitpack으로 의존성 관리하기
+
+이 글에서 소개하고 있는 QuerydslItemReader 를 사용하고싶으시다면 아래와 같이 의존성을 추가해서 사용해볼 수 있습니다.
+
+```groovy
+repositories {
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    compile 'com.github.jojoldu.spring-batch-querydsl:spring-batch-querydsl-reader:2.0.2'
+}
+```
+
 
 
