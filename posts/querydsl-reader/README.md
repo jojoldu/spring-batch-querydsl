@@ -21,7 +21,7 @@
 
 이외에도 [다양한 ItemReader](https://docs.spring.io/spring-batch/docs/current/reference/html/appendix.html#itemReadersAppendix)들을 지원하지만 **QuerydslItemReader는 지원하지 않습니다**.
 
-> 참고로 IbatisItemReader도 지원이 중단되었습니다.  
+> IbatisItemReader도 지원이 중단되었습니다.  
 > MyBatis 진영에서 직접 [MyBatisPagingItemReader](http://mybatis.org/spring/batch.html) 를 만들어 지원하고 있으니 참고해보세요.
 
 이러다보니 Spring Batch에서 Querydsl를 사용하기가 쉽지 않았는데요.  
@@ -491,9 +491,9 @@ LIMIT 페이지사이즈
 
 이 문제를 해결하기 위해서는 크게 2가지 해결책이 있습니다.
 
-### 1) 서브쿼리 + Join 으로 해결하기
+### 1) 커버링 인덱스 사용하기
 
-먼저 아래와 같이 서브쿼리 + Join으로 해결하는 방식이 있습니다.
+먼저 아래와 같이 커버링 인덱스로 해결하는 방식이 있습니다.
 
 ```sql
 SELECT  *
@@ -506,11 +506,17 @@ JOIN (SELECT id
         LIMIT 페이지사이즈) as temp on temp.id = i.id
 ```
 
-많은 부하가 필요한 ```order by```, ```offset```은 클러스터 인덱스인 ```id```로 진행하고, 그 결과로 나온 id 값들 (```limit``` 만큼 조회된 결과) 을 통해 다른 필요한 필드들은 실제로 해당 행에 접근해서 가져오는 방식을 이야기 합니다.
+일반적으로 인덱스를 이용해 조회되는 쿼리에서 가장 큰 성능 저하를 일으키는 부분은 인덱스를 검색해 대상이 되는 **row의 나머지 컬럼값을 가져오기 위해 디스크를 읽을 때** 입니다.  
+  
+기존의 쿼리는 ```order by```, ```offset ~ limit``` 을 수행할때에도 테이블의 row 접근을 하여 계산하게 됩니다.  
+  
+반대로 커버링 인덱스 방식을 이용하면, ```order by```, ```offset ~ limit``` 는 클러스터 인덱스인 ```id```만을 이용해 빠르게 처리하고, 그 최종 결과에 대해서만 row 에 접근하여 성능을 향상 시킬 수 있습니다. 
 
-> 참고: https://elky84.github.io/2018/10/05/mysql/
 
-### 2) offset을 제거한 페이징쿼리 사용하기
+
+> 참고: [MySQL에서 커버링 인덱스로 쿼리 성능을 높여보자!!](https://gywn.net/2012/04/mysql-covering-index/)
+
+### 2) offset을 제거한 쿼리 사용하기
 
 두번째는 **이전에 조회된 결과를 한번에 건너뛸수 있게** 마지막 조회 결과의 ID를 조건문에 사용하는 것입니다.
 
@@ -971,7 +977,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.github.jojoldu.spring-batch-querydsl:spring-batch-querydsl-reader:2.0.2'
+    compile 'com.github.jojoldu.spring-batch-querydsl:spring-batch-querydsl-reader:2.1.0'
 }
 ```
 
