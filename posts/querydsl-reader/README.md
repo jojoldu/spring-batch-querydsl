@@ -272,15 +272,20 @@ offset과 limit은 부모 클래스인 AbstractPagingItemReader 의 ```getPage()
 ![jpatx](./images/jpatx.png)
 
 해당 부분을 QuerydslPagingItemReader에서 제거한 이유는 ```hibernate.default_batch_fetch_size```이 정상적으로 작동하지 않기 때문입니다.  
-
-> hibernate.default_batch_fetch_size 옵션이 처음이시라면 어떤 옵션인지에 대한 내용은 [이전에 작성한 포스팅](https://jojoldu.tistory.com/457)을 참고해보세요.
-
-대량의 데이터에서 주로 사용되는 배치 애플리케이션에서 JPA의 N+1 문제는 심각한 성능 저하를 일으키기 때문에 해당 부분을 제거했습니다.  
+트랜잭션 안에서만 작동하는 ```hibernate.default_batch_fetch_size``` 가 기존의 코드에서는 단일 객체에서만 발동하게 됩니다.  
   
-그럼 새롭게 만든 이 ItemReader가 제대로 작동하는지 테스트 코드로 검증해보겠습니다.
+이미 스프링 배치에서는 **Chunk 단위로 트랜잭션이 보장**되고 있기 때문에 Chunk 단위 롤백 등 트랜잭션 관련된 이슈는 없는 것을 확인하였습니다.
 
-> 해당 옵션이 작동되지 않는 이유에 대해서는 [이 포스팅](https://jojoldu.tistory.com/414)을 참고해주세요.  
-> 위 이슈에 대해서는 Spring Batch 팀에 [PR](https://github.com/spring-projects/spring-batch/pull/713)을 보낸 상황입니다.
+> 해당 옵션의 테스트에 관해서는 [이 포스팅](https://jojoldu.tistory.com/414)을 참고해주세요.  
+
+이 ```hibernate.default_batch_fetch_size``` 이 없다면 여러개의 ```OneToMany``` 관계가 있는 엔티티 조회시에 발생하는 JPA N+1 문제를 해결하기가 어렵습니다.  
+대량의 데이터에서 주로 사용되는 배치 애플리케이션에서 JPA의 N+1 문제는 심각한 성능 저하를 일으키기 때문에 해당 부분을 제거했습니다.  
+
+> JPA N + 1 문제의 해결책이라 하면 **Fetch Join**을 떠올리는 분들이 많으실텐데요.  
+> 여러 자식들이 있는 경우 전체 자식 엔티티들에 Fetch Join을 걸수 없다는 문제가 있어 ```hibernate.default_batch_fetch_size``` 옵션은 필수로 사용됩니다.  
+> 자세한 내용은 [이전에 작성한 포스팅](https://jojoldu.tistory.com/457)을 참고해보세요.
+
+그럼 새롭게 만든 이 ItemReader가 제대로 작동하는지 테스트 코드로 검증해보겠습니다.
 
 ### 1-1. 테스트 코드로 검증
 
@@ -479,9 +484,9 @@ QuerydslPagingItemReader의 구현이 모두 확인 되었으니 다음으로 �
 즉, 아래와 같은 형태의 쿼리는 **offset 값이 커질수록 느리다**는 의미입니다.
 
 ```sql
-SELECT  *
-FROM  items
-WHERE  조건문
+SELECT *
+FROM items
+WHERE 조건문
 ORDER BY id DESC
 OFFSET 페이지번호
 LIMIT 페이지사이즈
@@ -506,15 +511,20 @@ JOIN (SELECT id
         LIMIT 페이지사이즈) as temp on temp.id = i.id
 ```
 
-일반적으로 인덱스를 이용해 조회되는 쿼리에서 가장 큰 성능 저하를 일으키는 부분은 인덱스를 검색해 대상이 되는 **row의 나머지 컬럼값을 가져오기 위해 디스크를 읽을 때** 입니다.  
+일반적으로 인덱스를 이용해 조회되는 쿼리에서 가장 큰 성능 저하를 일으키는 부분은 인덱스를 검색하고 **대상이 되는 row의 나머지 컬럼값을 데이터블록에서 읽을 때** 입니다.  
   
-기존의 쿼리는 ```order by```, ```offset ~ limit``` 을 수행할때에도 테이블의 row 접근을 하여 계산하게 됩니다.  
+기존의 쿼리는 ```order by```, ```offset ~ limit``` 을 수행할때도 데이터 블록으로 접근을 하게 됩니다.  
+
+![covering1](./images/covering1.png)
+
+최종 대상이 되는 row에 대해서만 데이터 블록 접근을 한다면 굉장히 빠를텐데 그렇지 않기 때문에 많은 성능 저하가 있게 됩니다.  
   
-반대로 커버링 인덱스 방식을 이용하면, ```order by```, ```offset ~ limit``` 는 클러스터 인덱스인 ```id```만을 이용해 빠르게 처리하고, 그 최종 결과에 대해서만 row 에 접근하여 성능을 향상 시킬 수 있습니다. 
+반대로 커버링 인덱스 방식을 이용하면, ```order by```, ```offset ~ limit``` 는 클러스터 인덱스인 ```id```만을 이용해 처리하고, 해당하는 row에 대해서만 데이터 블록에 접근하기 때문에 성능의 이점을 얻게 됩니다.
 
+![covering2](./images/covering2.png)
 
-
-> 참고: [MySQL에서 커버링 인덱스로 쿼리 성능을 높여보자!!](https://gywn.net/2012/04/mysql-covering-index/)
+> 좀 더 자세한 커버링 인덱스의 소개는 성동찬 님의 블로그 글을 참고하시면 좋습니다.  
+> [MySQL에서 커버링 인덱스로 쿼리 성능을 높여보자!!](https://gywn.net/2012/04/mysql-covering-index/)
 
 ### 2) offset을 제거한 쿼리 사용하기
 
@@ -960,16 +970,13 @@ Reader에서 조회되는 데이터가 1,189,000개 (페이지수는 1,189개) �
 2개의 QuerydslItemReader가 추가되면서 기존의 Spring Batch Job들에도 많은 변화가 생겼습니다.
 
 * 복잡한 정렬 기준이 필요한 경우엔 ```QuerydslPagingItemReader```
-* 복잡한 정렬 기준이 **아닌** 경우엔 ```QuerydslNoOffsetPagingItemReader```
+* 복잡한 정렬 기준 (```order by, group by```) 이 **아닌** 경우엔 ```QuerydslNoOffsetPagingItemReader```
 
 이 2개로 대응하기 어려운 상황이 발생한다면 그땐 기존처럼 ```Repository```를 주입받는 별도의 ItemReader를 생성하면 됩니다.  
   
-
-
-
 ### 번외. Jitpack으로 의존성 관리하기
 
-이 글에서 소개하고 있는 QuerydslItemReader 를 사용하고싶으시다면 아래와 같이 의존성을 추가해서 사용해볼 수 있습니다.
+이 글에서 소개하고 있는 QuerydslItemReader 를 사용하고 싶으시다면 아래와 같이 ```jitpack``` 레파지토리를 이용하시면 의존성을 추가해서 사용해볼 수 있습니다.
 
 ```groovy
 repositories {
