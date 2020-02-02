@@ -85,26 +85,29 @@ public class ProductBatchRepository extends QuerydslRepositorySupport {
 ```
 
 위 코드를 **매 Batch Job마다 작성**해야만 했습니다.  
+그리고 신규 입사자가 올때마다 ```AbstractPagingItemReader``` 를 어떻게 상속 받아 구현체를 만들어야 하는지 설명해야만 했습니다.  
+JpaPagingItemReader나 HibernatePagingItemReader를 사용한다면 쿼리만 작성하면 되는 일인데 말이죠.  
   
-중요한 Querydsl의 쿼리 작성보다 **행사코드가 더 많은 일**이 발생한 것이죠.  
-행사코드가 많다는 말은 **중요하지 않은 코드에 더 많은 시간을 써야할 수도** 있음을 이야기합니다.  
+정작 중요한 배치 쿼리 작성보다 **행사 코드가 더 많은 일**이 발생한 것입니다.  
+행사코드가 많다는 말은 **중요하지 않은 코드에 더 많은 시간을 써야함**을 이야기합니다.  
   
 실제로 위의 Reader에서 변경이 필요한 부분은 **주어진 조건의 Product를 가져오는 쿼리**입니다.  
-repository의 Querydsl 부분을 제외하고는 **대부분은 비슷한 코드가 필요합니다**.  
+그 외 나머지 부분은 매번 Reader가 필요할때마다 작성해야할 반복된 코드입니다.  
+(```offset```, ```limit```, 생성자, ```results.addAll(products);``` 등등)  
   
-결과적으로 JpaPagingItemReader, HibernatePagingItemReader에 비해 Querydsl을 사용하는 방식은 불편한 점이 있다고 판단되었습니다.  
+결과적으로 JpaPagingItemReader, HibernatePagingItemReader에 비해 Querydsl을 사용하는 방식은 불편한 점이 많았습니다.  
 
-> 물론 Querdsl을 포기하고 JpaPagingItemReader를 이용해도 됩니다만, 그렇게 되면 Querydsl의 **타입 안정성, 자동완성, 컴파일 단계 문법체크, 공백이슈**를 지원받을 수가 없습니다.  
-> 더군다나 페이징 성능 향상을 위한 Offset이 제거된 페이징 처리는 JpaPagingItemReader에서도 불가능하여 별도의 Reader를 만들어야만 합니다.  
+> 물론 Querdsl을 포기하고 JpaPagingItemReader를 이용해도 됩니다만, 그렇게 되면 Querydsl의 **타입 안정성, 자동완성, 컴파일 단계 문법체크, 공백 이슈 대응**를 지원받을 수가 없습니다.  
+> 더군다나 페이징 성능 향상을 위한 Offset이 제거된 페이징 처리는 JpaPagingItemReader에서도 불가능하여 매번 별도의 Reader를 만들수 밖에 없었습니다.  
 > 100개가 넘는 테이블, 수십개의 배치를 개발/운영하는 입장에서 이걸 포기할 순 없었습니다.  
   
-그래서 팀에서는 **Querydsl의 쿼리에만 집중**할 수 있도록  QuerydslPagingItemReader를 개발하게 되었습니다.  
+그래서 팀에서는 **Querydsl의 쿼리에만 집중**할 수 있도록  QuerydslItemReader를 개발하게 되었습니다.  
   
 이 글에서는 아래 2가지 ItemReader에 대해 소개하고 사용법을 다뤄볼 예정입니다.
 
 * Querydsl**Paging**ItemReader
-* Querydsl**NoOffset**PagingItemReader
-  * MySQL의 offset 성능 이슈를 해결하기 위해 **offset없이 페이징**하는 QuerydslReader 입니다.
+* Querydsl**NoOffsetPaging**ItemReader
+  * MySQL의 offset 성능 이슈를 해결하기 위해 **offset없이 페이징**하는 QuerydslItemReader 입니다.
 
 그럼 이제 시작하겠습니다.
 
@@ -242,9 +245,9 @@ public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
 }
 ```
 
-> 후술할 Querydsl**NoOffset**PagingItemReader에서 QuerydslPagingItemReader를 **상속**하기 때문에 대부분의 메소드와 필드는 ```protected``` 입니다.
+> 후술할 Querydsl**NoOffsetPaging**ItemReader에서 QuerydslPagingItemReader를 **상속**하기 때문에 대부분의 메소드와 필드는 ```protected```를 사용했습니다.
 
-대부분의 코드가 기존 JpaPagingItemReader에 있던 코드라 달라진 부분들만 보시면 될 것 같습니다.  
+대부분의 코드가 기존 JpaPagingItemReader에 있던 코드라서 달라진 부분들만 보시면 될 것 같습니다.  
   
 먼저 **람다 표현식**을 사용할 수 있도록 ```Function<JPAQueryFactory, JPAQuery<T>> queryFunction``` 가 생성자 인자로 추가되었습니다.
 
@@ -271,19 +274,18 @@ offset과 limit은 부모 클래스인 AbstractPagingItemReader 의 ```getPage()
 
 ![jpatx](./images/jpatx.png)
 
-해당 부분을 QuerydslPagingItemReader에서 제거한 이유는 ```hibernate.default_batch_fetch_size```이 정상적으로 작동하지 않기 때문입니다.  
-트랜잭션 안에서만 작동하는 ```hibernate.default_batch_fetch_size``` 가 기존의 코드에서는 단일 객체에서만 발동하게 됩니다.  
+해당 부분을 QuerydslPagingItemReader에서 제거한 이유는 ```hibernate.default_batch_fetch_size```이 트랜잭션 commit 단위로 작동하다보니, 기존 **JpaPagingItemReader에서는 정상 작동하지 않기 때문**입니다.  
   
-이미 스프링 배치에서는 **Chunk 단위로 트랜잭션이 보장**되고 있기 때문에 Chunk 단위 롤백 등 트랜잭션 관련된 이슈는 없는 것을 확인하였습니다.
+이미 Spring Batch에서는 **Chunk 단위로 트랜잭션이 보장**되고 있기 때문에 Chunk 단위 롤백 등 트랜잭션 관리는 Spring Batch에 의존하게 두었습니다.
 
 > 해당 옵션의 테스트에 관해서는 [이 포스팅](https://jojoldu.tistory.com/414)을 참고해주세요.  
 
-이 ```hibernate.default_batch_fetch_size``` 이 없다면 여러개의 ```OneToMany``` 관계가 있는 엔티티 조회시에 발생하는 JPA N+1 문제를 해결하기가 어렵습니다.  
+이 ```hibernate.default_batch_fetch_size``` 이 없다면 여러개의 ```OneToMany``` 관계가 있는 엔티티 조회시에 발생하는 JPA N+1 문제를 Fetch Join만으로는 해결하기가 어렵습니다.  
+  
 대량의 데이터에서 주로 사용되는 배치 애플리케이션에서 JPA의 N+1 문제는 심각한 성능 저하를 일으키기 때문에 해당 부분을 제거했습니다.  
 
 > JPA N + 1 문제의 해결책이라 하면 **Fetch Join**을 떠올리는 분들이 많으실텐데요.  
-> 여러 자식들이 있는 경우 전체 자식 엔티티들에 Fetch Join을 걸수 없다는 문제가 있어 ```hibernate.default_batch_fetch_size``` 옵션은 필수로 사용됩니다.  
-> 자세한 내용은 [이전에 작성한 포스팅](https://jojoldu.tistory.com/457)을 참고해보세요.
+> 여러 자식 엔티티들이 있는 경우 전체 자식 엔티티들에 Fetch Join을 걸수 없다는 문제 ([MultipleBagFetchException](https://jojoldu.tistory.com/457))가 있어 ```hibernate.default_batch_fetch_size``` 옵션은 필수로 사용됩니다.  
 
 그럼 새롭게 만든 이 ItemReader가 제대로 작동하는지 테스트 코드로 검증해보겠습니다.
 
@@ -328,7 +330,7 @@ public void reader가_정상적으로_값을반환한다() throws Exception {
 (1) **페이징이 정상적으로 되는지** 확인하기 위해 pageSize를 1로 했습니다.
 
 * 2개의 데이터를 넣었으니, 이렇게 하면 **총 3번의 페이징 쿼리가 발생**합니다.
-* 2번이 아니라 3번인 이유는, 마지막 쿼리를 통해 **더이상 읽을것이 없는지** 확인하기 때문입니다.
+* 두번이 아니라 세번인 이유는, 마지막 쿼리를 통해 **더이상 읽을것이 없는지** 확인하기 때문입니다.
   
 (2) ItemReader만 단독으로 테스트 하기 위해서는 별도의 실행환경 (```ExecutionContext```)을 등록 해줘야만 합니다.
 
@@ -368,9 +370,11 @@ public void 빈값일경우_null이_반환된다() throws Exception {
 
 ![pagingTest2](./images/pagingTest2.png)
 
+테스트가 되었으니 직접 Spring Batch Job에 적용해보겠습니다.
+
 ### 1-2. 사용 방법
 
-이렇게 만든 QuerydslPagingItemReader는 배치 Job에선 아래와 같이 사용할 수 있습니다.
+QuerydslPagingItemReader는 배치 Job에서 아래와 같이 사용할 수 있습니다.
 
 ![pagingReaderSample](./images/pagingReaderSample.png)
 
@@ -492,8 +496,9 @@ OFFSET 페이지번호
 LIMIT 페이지사이즈
 ```
 
-위 쿼리는 일반적으로 **Spring Batch에서 ItemReader 가 수행하는 쿼리와 유사한 형태**입니다.  
-
+위 쿼리는 일반적으로 **Spring Batch에서 가장 많이 사용되는 형태**입니다.  
+즉, 데이터가 많을수록 Spring Batch의 PagingItemReader를 사용하면 느리다는것을 의미합니다.  
+  
 이 문제를 해결하기 위해서는 크게 2가지 해결책이 있습니다.
 
 ### 1) 커버링 인덱스 사용하기
@@ -511,14 +516,12 @@ JOIN (SELECT id
         LIMIT 페이지사이즈) as temp on temp.id = i.id
 ```
 
-일반적으로 인덱스를 이용해 조회되는 쿼리에서 가장 큰 성능 저하를 일으키는 부분은 인덱스를 검색하고 **대상이 되는 row의 나머지 컬럼값을 데이터블록에서 읽을 때** 입니다.  
+일반적으로 인덱스를 이용해 조회되는 쿼리에서 가장 큰 성능 저하를 일으키는 부분은 인덱스를 검색하고 **대상이 되는 row의 나머지 컬럼값을 데이터 블록에서 읽을 때** 입니다.  
   
 기존의 쿼리는 ```order by```, ```offset ~ limit``` 을 수행할때도 데이터 블록으로 접근을 하게 됩니다.  
 
 ![covering1](./images/covering1.png)
-
-최종 대상이 되는 row에 대해서만 데이터 블록 접근을 한다면 굉장히 빠를텐데 그렇지 않기 때문에 많은 성능 저하가 있게 됩니다.  
-  
+   
 반대로 커버링 인덱스 방식을 이용하면, ```order by```, ```offset ~ limit``` 는 클러스터 인덱스인 ```id```만을 이용해 처리하고, 해당하는 row에 대해서만 데이터 블록에 접근하기 때문에 성능의 이점을 얻게 됩니다.
 
 ![covering2](./images/covering2.png)
@@ -554,27 +557,29 @@ offset 페이징 쿼리가 뒤로갈수록 느린 이유는 결국 **앞에서 �
 
 > 참고: [fetch-next-page](https://use-the-index-luke.com/sql/partial-results/fetch-next-page)
 
-2가지 방식 모두 성능 향상을 기대할 순 있으나 이번에 만들 PagingItemReader (해당 ItemReader의 이름을 ```QuerydslNoOffsetPagingItemReader```로 하겠습니다) 는 2번째 방법을 사용합니다.
+2가지 방식 모두 성능 향상을 기대할 순 있으나 이번에 만들 ```QuerydslNoOffsetPagingItemReader``` 는 2번째 방법을 사용합니다.
 그 이유는 다음과 같습니다.
 
 * 아무리 읽을 페이지가 많아도 일정한 속도를 유지해줄 수 있으며
 * **JPQL 에서는 from절의 서브쿼리를 지원하지 않습니다**.
   
 두번째 방식을 사용하기 위해선 몇가지 고려 사항이 있었습니다만 다행히 현재 저희 프로젝트에서는 그 부분들이 모두 문제가 되지않아 **QuerydslNoOffsetPagingItemReader**를 만들 수 있었습니다.
+  
 고려 사항들은 다음과 같습니다.
 
-* Batch Job들의 ```order by``` 필수 여부.
+* 기존 Batch Job들의 Reader 쿼리에서 ```order by```, ```group by```가 없는지?
   * 현재 팀 내의 Batch Job들은 필수가 아니였습니다.
-  * 각 raw 데이터를 읽어와 집계 / 변환하는 Batch들이 대부분이였습니다.
-  * 어떤 순서로 읽는게 중요하지 않고, 대량의 데이터를 가공하는게 중요했습니다.
-  * ```order by```가 **pk외에 다른 기준으로 복잡하게** 사용해야 한다면 QuerydslNoOffsetPagingItemReader를 활용하기는 어렵습니다.
+    * 각 raw 데이터를 읽어와 집계 / 변환하는 Batch들이 대부분이였습니다.
+    * 어떤 순서로 읽는게 중요하지 않고, 대량의 데이터를 가공하는게 중요했습니다.
+  * ```order by```, ```group by```가 **PK외에 다른 기준으로 복잡하게** 사용해야 한다면 QuerydslNoOffsetPagingItemReader를 활용하기는 어렵습니다.
 
 위 조건이 필수는 아니나, 아무래도 표준 라이브러리를 만들때 **모든 경우의 수를 다 고려하면 작업량이 너무 많습니다**.  
-그래서 위 조건으로 범위를 제한하고나서 작업을 진행합니다.  
   
-만들어야할 기능을 한번 정리해보면 다음과 같습니다.  
+그래서 위 조건인 경우에만 사용하도록 제한하고 라이브러리를 만들었습니다.
+
+만들어야할 기능을 정리해보면 다음과 같습니다.  
   
-기존 페이징 쿼리에서 아래 쿼리를 **자동으로 추가**해주는 것입니다.
+* 기존 페이징 쿼리에서 아래 쿼리를 **자동으로 추가**해주는 것입니다.
 
 ```sql
 AND id < 마지막조회ID # 직전 조회 결과의 마지막 id
@@ -601,7 +606,7 @@ LIMIT 페이지사이즈
   * 즉, ```"id"``` 가 아닌 ```QProduct.product.id``` 가 되어야함을 의미
   * 문자열로 지정할 경우, **오타, 필드 변경**에 대해 컴파일 체크가 안되기 때문에 Querydsl의 QClass 필드로 지정
 
-위의 여러 기능들을 위해 ItemReader외에 2개의 클래스를 추가로 개발합니다.
+위의 여러 기능들을 좀 더 관리하기 쉽도록 ItemReader외에 2개의 클래스를 추가로 개발합니다.
 
 * ```QuerydslNoOffsetOptions```
   * **어떤 필드를 기준으로** 사용할지 결정하는 추상 클래스입니다.
@@ -641,8 +646,11 @@ private NumberExpression<N> selectFirstId() {
 }
 ```
 
+(구현 코드)  
+  
 해당 메소드는 다음과 같은 역할을 합니다.  
-**첫번째 페이지 조회가 필요할때** ```max()/min()``` 을 이용해 **첫번째 기준 ID**를 조건으로 추가해줍니다.  
+
+* **첫번째 페이지 조회가 필요할때** ```max()/min()``` 을 이용해 **첫번째 기준 ID**를 조건으로 추가해줍니다.  
   
 이 메소드가 추가된 이유는 2가지 문제를 회피하기 위함인데요.
 
@@ -725,7 +733,7 @@ public class QuerydslNoOffsetPagingItemReader<T> extends QuerydslPagingItemReade
 
 ### 2-1. 테스트 코드로 검증
 
-먼저 ```QuerydslNoOffsetOptions``` 이 필드명을 잘 찾아내는지 검증합니다.
+먼저 ```QuerydslNoOffsetOptions``` 이 QClass에서 필드명을 잘 찾아내는지 검증합니다.
 
 ```java
 @Test
@@ -779,7 +787,7 @@ public void reader가_정상적으로_값을반환한다() throws Exception {
 }
 ```
 
-Number 타입외에 문자열 타입도 정상적으로 되는지 검증합니다.
+Number 타입외에 **문자열 타입**도 정상적으로 작동 되는지 검증합니다.
 
 ```java
 @Test
@@ -963,20 +971,33 @@ Reader에서 조회되는 데이터가 1,189,000개 (페이지수는 1,189개) �
 
 ![result2-2](./images/result2-2.png)
 
-2개의 Batch Job 을 확인해보면 **마지막 페이지에 가서도 전혀 느려지지 않는** 것을 확인할 수 있습니다.
+2개의 Batch Job 을 확인해보면 **마지막 페이지에 가서도 전혀 느려지지 않는 것**을 확인할 수 있습니다.
 
 ## 4. 마무리
 
 2개의 QuerydslItemReader가 추가되면서 기존의 Spring Batch Job들에도 많은 변화가 생겼습니다.
 
 * 복잡한 정렬 기준이 필요한 경우엔 ```QuerydslPagingItemReader```
-* 복잡한 정렬 기준 (```order by, group by```) 이 **아닌** 경우엔 ```QuerydslNoOffsetPagingItemReader```
+* **복잡한 정렬 기준이 아니면서 대량의 페이징 조회가 필요한 경우** 엔 ```QuerydslNoOffsetPagingItemReader```
+* 위 2개로 대응하기 어려운 상황이 발생한다면 그땐 기존처럼 ```Repository```를 주입받는 별도의 ItemReader를 생성하여 처리합니다.  
 
-이 2개로 대응하기 어려운 상황이 발생한다면 그땐 기존처럼 ```Repository```를 주입받는 별도의 ItemReader를 생성하면 됩니다.  
+팀에서 사용하던 표준 클래스를 오픈된 공간인 사내 기술 블로그에 공개한다는 것은 **퀘스트가 클리어된 PC게임의 세이브 파일이 공유되는 것**과 같다고 생각합니다.  
+(파랜드 택틱스나 삼국지 조조전이 떠오르네요.)  
   
+부족한 코드를 공개한다는게 참 부끄러운 일이지만, 그래도 누군가에겐 이 세이브 파일이 필요하지 않을까란 생각을 했습니다.  
+그래야 다음 퀘스트에 대해 다들 이야기해볼 수 있을테니까요.  
+  
+이게 가장 완벽하게 클리어된 세이브 파일이라고는 생각하지 않습니다.  
+저희의 코드를 보시면서 "나라면 좀 더 잘 만들수 있는데", "우리는 이것보다 훨씬 더 좋은걸 사용하고 있는데" 라는 분들이 분명 계실거라 생각합니다.  
+  
+저와 저희팀은 여기까지 고민을 했습니다.  
+이 다음을 고민해주실분, 혹은 좀 더 멋지게 클리어 해주실 분들의 세이브파일 을 기다립니다.  
+  
+끝까지 읽어주셔서 고맙습니다.
+
 ### 번외. Jitpack으로 의존성 관리하기
 
-이 글에서 소개하고 있는 QuerydslItemReader 를 사용하고 싶으시다면 아래와 같이 ```jitpack``` 레파지토리를 이용하시면 의존성을 추가해서 사용해볼 수 있습니다.
+이 글에서 소개하고 있는 2개의 QuerydslItemReader 를 사용하고 싶으시다면 아래와 같이 ```jitpack``` 레파지토리를 이용하여 의존성을 추가하면 사용해볼 수 있습니다.
 
 ```groovy
 repositories {
@@ -988,5 +1009,4 @@ dependencies {
 }
 ```
 
-
-
+> 앞에서도 언급했지만, 운영에서 사용하실땐 **꼭 테스트를 해보세요**!!
