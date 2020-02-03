@@ -306,9 +306,8 @@ offset과 limit은 부모 클래스인 AbstractPagingItemReader 의 ```getPage()
 
 ![jpatx](./images/jpatx.png)
 
-해당 부분을 QuerydslPagingItemReader에서 제거한 이유는 [hibernate.default_batch_fetch_size](https://jojoldu.tistory.com/457)이 트랜잭션 commit 단위로 작동하다보니, 기존 **JpaPagingItemReader에서는 정상 작동하지 않기 때문**입니다.  
+해당 부분을 QuerydslPagingItemReader에서 제거한 이유는 [hibernate.default_batch_fetch_size](https://jojoldu.tistory.com/457)이 트랜잭션 commit 단위로 작동하다보니, 기존 JpaPagingItemReader에서는 **페이지 단위의 트랜잭션이 관리되어 정상 작동하지 않기 때문**입니다.  
   
-그래서 페이지 단위의 트랜잭션이 관리되어서는 ```hibernate.default_batch_fetch_size```이 정상작동하지 않는데요.  
 이 옵션을 제거한다해도, Spring Batch에서는 기본적으로 **Chunk 단위로 트랜잭션이 보장**되고 있기 때문에 Chunk 단위 롤백 등 트랜잭션 관리는 잘 작동되는 것을 확인하였습니다.  
 
 > 트랜잭션 코드 제거에 대한 테스트는 [이 포스팅](https://jojoldu.tistory.com/414)에 정리하였으니 참고해주세요.  
