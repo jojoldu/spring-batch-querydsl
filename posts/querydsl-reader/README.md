@@ -1,5 +1,35 @@
 # Spring Batch와 QuerydslItemReader
 
+안녕하세요 우아한 형제들 정산시스템팀 이동욱입니다.  
+  
+올해는 무슨 글을 기술 블로그에 쓸까 고민하다가, 1월초까지 생각했던 주제는 **팀에 관련된 주제**였습니다.  
+  
+[결팀소: 결제시스템팀을 소개합니다](http://woowabros.github.io/woowabros/2019/08/06/wooteamso.html)와 같은 "정팀소-정산시스템팀을 소개합니다" 혹은 "정개추-정산에서개발을추구하면안되는걸까" (던만추 컨셉) 등이였죠.  
+
+![던만추](./images/던만추.png)
+
+(던만추)  
+  
+팀에 관련된 이야기라면 뭐니뭐니해도 팀장님 얘기가 빠질수가 없는데, 주제를 정하자마자 **조직개편으로 팀장님이 다른 팀으로 발령**났습니다.  
+  
+정권이 교체되었으니 라인 환승도 해야하고, [우아한테크코스](http://woowabros.github.io/techcourse/2019/10/14/woowacourse.html) 졸업생 분이 신입 개발자로 합류도 하셔서 팀 이야기는 좀 더 뒤로 미룰수 밖에 없었습니다.
+
+![환승](./images/환승.png)
+
+(레진코믹스의 [레바툰-191화](https://www.lezhin.com/ko/comic/revatoon/191))  
+  
+그래서 비 기술적인 주제 보다는 시류를 덜타는 기술적인 주제를 찾게 되었는데요.  
+저희팀이 유독 많이 사용하고, 필요하면 라이브러리를 만들어서 사용하기도 하는 **Spring Batch와 Querydsl**에 대해 주제를 정하게 되었습니다.  
+  
+아무래도 Spring Batch는 다른 스프링 모듈에 비해 인기가 없는데요.  
+Mvc나 Data, Security 등과 관련되서 쓰면 좀 더 많은 분들이 볼것 같은데 라는 생각도 들었습니다.  
+  
+하지만 이미 본문을 먼저 다쓰고 서문을 쓰고 있어서 어쩔수 없습니다.  
+트래픽으로 증명할 수 밖에요.  
+이 글을 보고 계신분들 힘을 모아주세요.
+
+## Intro
+
 > 예제로 사용한 모든 코드는 [Github](https://github.com/jojoldu/spring-batch-querydsl)에 올려두었습니다.
 
 현재 팀에서 공식적으로 JPA를 사용하면서 **복잡한 조회 쿼리**는 [Querydsl](http://www.querydsl.com/) 로 계속 처리해오고 있었습니다.  
@@ -274,18 +304,38 @@ offset과 limit은 부모 클래스인 AbstractPagingItemReader 의 ```getPage()
 
 ![jpatx](./images/jpatx.png)
 
-해당 부분을 QuerydslPagingItemReader에서 제거한 이유는 ```hibernate.default_batch_fetch_size```이 트랜잭션 commit 단위로 작동하다보니, 기존 **JpaPagingItemReader에서는 정상 작동하지 않기 때문**입니다.  
+해당 부분을 QuerydslPagingItemReader에서 제거한 이유는 [hibernate.default_batch_fetch_size](https://jojoldu.tistory.com/457)이 트랜잭션 commit 단위로 작동하다보니, 기존 **JpaPagingItemReader에서는 정상 작동하지 않기 때문**입니다.  
   
-이미 Spring Batch에서는 **Chunk 단위로 트랜잭션이 보장**되고 있기 때문에 Chunk 단위 롤백 등 트랜잭션 관리는 Spring Batch에 의존하게 두었습니다.
+그래서 페이지 단위의 트랜잭션이 관리되어서는 ```hibernate.default_batch_fetch_size```이 정상작동하지 않는데요.  
+이 옵션을 제거한다해도, Spring Batch에서는 기본적으로 **Chunk 단위로 트랜잭션이 보장**되고 있기 때문에 Chunk 단위 롤백 등 트랜잭션 관리는 잘 작동되는 것을 확인하였습니다.  
 
-> 해당 옵션의 테스트에 관해서는 [이 포스팅](https://jojoldu.tistory.com/414)을 참고해주세요.  
+> 트랜잭션 코드 제거에 대한 테스트는 [이 포스팅](https://jojoldu.tistory.com/414)에 정리하였으니 참고해주세요.  
 
-이 ```hibernate.default_batch_fetch_size``` 이 없다면 여러개의 ```OneToMany``` 관계가 있는 엔티티 조회시에 발생하는 JPA N+1 문제를 Fetch Join만으로는 해결하기가 어렵습니다.  
+그럼 굳이 왜 JpaPagingItemReader에서만 한번 더 트랜잭션을 관리할까 궁금하여 [Spring Batch Gitter](https://gitter.im/spring-batch/Lobby)에 질문을 남겼는데요.  
+
+![gitter](./images/gitter.png)
+
+아래와 같이 답변이 왔습니다.
+
+> I could not find any additional context from the commit message or the related issue, but there should be a very good reason for that commit.  
+> I have a hunch that this was introduced to make the behaviour consistent with the JdbcCursorItemReader.  
+> Your PR reverts that commit, so we can't merge it for now.  
+> I will let you know when we start working on it.
+
+구글 번역기를 돌려보면..  
+
+> 커밋 메시지 또는 관련 문제에서 추가 컨텍스트를 찾을 수 없지만 해당 커밋에 대한 충분한 이유가 있습니다.  
+> **JdbcCursorItemReader와 동작이 일치하도록하기 위해** 도입되었습니다.  
+> 귀하의 PR은 해당 커밋을 되돌리므로 지금은 병합 할 수 없습니다.  
+> 작업을 시작할 때 알려 드리겠습니다.
+
+개인적으로나 팀적으로나 굳이 Cursor와 같은 사용성을 얻기 위해 JPA N+1 문제를 Fetch Join만으로 해결하는 것은 더 좋지 못하다는 생각이 들었습니다.  
+
+이 ```hibernate.default_batch_fetch_size``` 이 없다면 여러개의 ```OneToMany``` 관계가 있는 엔티티 조회시에 JPA N + 1 문제가 제대로 해결이 안되어 대량의 데이터에서 주로 사용되는 배치 애플리케이션에서는 심각한 **성능 저하**를 일으키기 쉽습니다.  
   
-대량의 데이터에서 주로 사용되는 배치 애플리케이션에서 JPA의 N+1 문제는 심각한 성능 저하를 일으키기 때문에 해당 부분을 제거했습니다.  
+**팀을 위한 ItemReader**를 만드는 작업이니, 좀 더 팀에 필요한 방식을 선택하자고 결론 짓고 QuerydslPagingItemReader에서는 트랜잭션 관련된 코드를 모두 제거하였습니다.
 
-> JPA N + 1 문제의 해결책이라 하면 **Fetch Join**을 떠올리는 분들이 많으실텐데요.  
-> 여러 자식 엔티티들이 있는 경우 전체 자식 엔티티들에 Fetch Join을 걸수 없다는 문제 ([MultipleBagFetchException](https://jojoldu.tistory.com/457))가 있어 ```hibernate.default_batch_fetch_size``` 옵션은 필수로 사용됩니다.  
+> 찜찜하게 느껴지신다면 트랜잭션 관련 코드는 기존과 동일하게 사용하셔도 됩니다.
 
 그럼 새롭게 만든 이 ItemReader가 제대로 작동하는지 테스트 코드로 검증해보겠습니다.
 
@@ -977,8 +1027,8 @@ Reader에서 조회되는 데이터가 1,189,000개 (페이지수는 1,189개) �
 
 2개의 QuerydslItemReader가 추가되면서 기존의 Spring Batch Job들에도 많은 변화가 생겼습니다.
 
-* 복잡한 정렬 기준이 필요한 경우엔 ```QuerydslPagingItemReader```
-* **복잡한 정렬 기준이 아니면서 대량의 페이징 조회가 필요한 경우** 엔 ```QuerydslNoOffsetPagingItemReader```
+* **복잡한 정렬 기준이 아니면서 대량의 페이징 조회**가 필요한 경우엔 ```QuerydslNoOffsetPagingItemReader```
+* 그외 일반적인 상황에서는 ```QuerydslPagingItemReader```
 * 위 2개로 대응하기 어려운 상황이 발생한다면 그땐 기존처럼 ```Repository```를 주입받는 별도의 ItemReader를 생성하여 처리합니다.  
 
 팀에서 사용하던 표준 클래스를 오픈된 공간인 사내 기술 블로그에 공개한다는 것은 **퀘스트가 클리어된 PC게임의 세이브 파일이 공유되는 것**과 같다고 생각합니다.  
@@ -989,9 +1039,10 @@ Reader에서 조회되는 데이터가 1,189,000개 (페이지수는 1,189개) �
   
 이게 가장 완벽하게 클리어된 세이브 파일이라고는 생각하지 않습니다.  
 저희의 코드를 보시면서 "나라면 좀 더 잘 만들수 있는데", "우리는 이것보다 훨씬 더 좋은걸 사용하고 있는데" 라는 분들이 분명 계실거라 생각합니다.  
+저와 저희팀은 그런 분들의 해결 방법이 많이 궁금합니다.  
   
-저와 저희팀은 여기까지 고민을 했습니다.  
-이 다음을 고민해주실분, 혹은 좀 더 멋지게 클리어 해주실 분들의 세이브파일 을 기다립니다.  
+저와 저희팀은 여기까지 고민을 했는데요.  
+이 다음을 고민해주실분, 혹은 좀 더 멋지게 클리어 해주실 분들의 세이브파일을 기다립니다.  
   
 끝까지 읽어주셔서 고맙습니다.
 
