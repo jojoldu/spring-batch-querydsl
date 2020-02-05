@@ -1,5 +1,7 @@
 # Spring Batch와 QuerydslItemReader
 
+> 아래 글은 [사내 기술 블로그](http://woowabros.github.io/experience/2020/02/05/springbatch-querydsl.html)에 동일하게 공유된 글입니다.
+
 안녕하세요 우아한형제들 정산시스템팀 이동욱입니다.  
   
 올해는 무슨 글을 기술 블로그에 쓸까 고민하다가, 1월초까지 생각했던 것은 **팀에 관련된 주제**였습니다.  
