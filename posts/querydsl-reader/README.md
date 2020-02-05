@@ -2,7 +2,7 @@
 
 안녕하세요 우아한형제들 정산시스템팀 이동욱입니다.  
   
-올해는 무슨 글을 기술 블로그에 쓸까 고민하다가, 1월초까지 생각했던 주제는 **팀에 관련된 주제**였습니다.  
+올해는 무슨 글을 기술 블로그에 쓸까 고민하다가, 1월초까지 생각했던 것은 **팀에 관련된 주제**였습니다.  
   
 [결팀소: 결제시스템팀을 소개합니다](http://woowabros.github.io/woowabros/2019/08/06/wooteamso.html)와 같은 "정팀소: 정산시스템팀을 소개합니다" 혹은 "정개추: 정산에서개발을추구하면안되는걸까" (던만추 컨셉) 등이였죠.  
 
@@ -327,11 +327,21 @@ offset과 limit은 부모 클래스인 AbstractPagingItemReader 의 ```getPage()
 
 > 커밋 메시지 또는 관련 문제에서 추가 컨텍스트를 찾을 수 없지만 해당 커밋에 대한 충분한 이유가 있습니다.  
 > **JdbcCursorItemReader와 동작이 일치하도록하기 위해** 도입되었습니다.  
-> 귀하의 PR은 해당 커밋을 되돌리므로 지금은 병합 할 수 없습니다.  
+> 귀하의 PR은 당시의 commit을 되돌리므로 지금은 Merge 할 수 없습니다.  
 > 작업을 시작할 때 알려 드리겠습니다.
 
-개인적으로나 팀적으로나 굳이 Cursor와 같은 사용성을 얻기 위해 JPA N+1 문제를 Fetch Join만으로 해결하는 것은 더 좋지 못하다는 생각이 들었습니다.  
+답변에 언급된 [JdbcCursorItemReader](https://github.com/spring-projects/spring-batch/blob/a7092a21e428cf904f210aff2682b518dc3649c5/spring-batch-infrastructure/src/main/java/org/springframework/batch/item/database/JdbcCursorItemReader.java#L40-L41)에는 어떻게 설명되어있는지도 같이 참고했습니다.
 
+![jdbccursoritemreader](./images/jdbccursoritemreader.png)
+
+> By default the cursor will be opened using a separate connection which means that it will not participate in any transactions created as part of the step processing.
+
+이것도 구글 번역기를 돌려보면.. 
+
+> 기본적으로 cursor는 별도의 연결을 사용하여 열리므로 Step 처리의 일부로 작성된 트랜잭션에 참여하지 않습니다.
+
+개인적으로나 팀적으로나 굳이 Cursor와 같은 사용성을 얻기 위해 JPA N+1 문제를 Fetch Join만으로 해결하는 것은 더 좋지 못하다는 생각이 들었습니다.  
+  
 이 ```hibernate.default_batch_fetch_size``` 이 없다면 여러개의 ```OneToMany``` 관계가 있는 엔티티 조회시에 JPA N + 1 문제가 제대로 해결이 안되어 대량의 데이터에서 주로 사용되는 배치 애플리케이션에서는 심각한 **성능 저하**를 일으키기 쉽습니다.  
   
 **팀을 위한 ItemReader**를 만드는 작업이니, 좀 더 팀에 필요한 방식을 선택하자고 결론 짓고 QuerydslPagingItemReader에서는 트랜잭션 관련된 코드를 모두 제거하였습니다.
