@@ -7,6 +7,7 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
 
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
 import java.util.function.Function;
 
 public class QuerydslNoOffsetPagingItemReader<T> extends QuerydslPagingItemReader<T> {
@@ -22,24 +23,22 @@ public class QuerydslNoOffsetPagingItemReader<T> extends QuerydslPagingItemReade
                                             int pageSize,
                                             QuerydslNoOffsetOptions<T> options,
                                             Function<JPAQueryFactory, JPAQuery<T>> queryFunction) {
-        this();
-        super.entityManagerFactory = entityManagerFactory;
-        super.queryFunction = queryFunction;
+        super(entityManagerFactory, pageSize, queryFunction);
+        setName(ClassUtils.getShortName(QuerydslNoOffsetPagingItemReader.class));
         this.options = options;
-        setPageSize(pageSize);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     protected void doReadPage() {
 
-        clearIfTransacted();
+        EntityTransaction tx = getTxOrNull();
 
         JPAQuery<T> query = createQuery().limit(getPageSize());
 
         initResults();
 
-        fetchQuery(query);
+        fetchQuery(query, tx);
 
         resetCurrentIdIfNotLastPage();
     }
