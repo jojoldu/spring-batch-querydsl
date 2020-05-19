@@ -29,7 +29,7 @@ public class QuerydslNoOffsetStringOptions<T> extends QuerydslNoOffsetOptions <T
                     .fetchOne();
 
             if (logger.isDebugEnabled()) {
-                logger.debug("First Current Id " + currentId);
+                logger.debug("First Select Key= " + currentId);
             }
         }
     }
@@ -65,7 +65,7 @@ public class QuerydslNoOffsetStringOptions<T> extends QuerydslNoOffsetOptions <T
     public void resetCurrentId(T item) {
         currentId = (String) getFiledValue(item);
         if (logger.isDebugEnabled()) {
-            logger.debug("Current Id= " + currentId);
+            logger.debug("Current Select Key= " + currentId);
         }
     }
 }

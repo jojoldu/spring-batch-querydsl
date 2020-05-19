@@ -180,7 +180,7 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         int categoryNo = 1;
         int expected1 = 1000;
         int expected2 = 2000;
-        int expected3 = 2000;
+        int expected3 = 3000;
         productRepository.save(new Product(name, expected1, categoryNo, txDate));
         productRepository.save(new Product(name, expected2, categoryNo, txDate));
         productRepository.save(new Product(name, expected3, categoryNo, txDate));
