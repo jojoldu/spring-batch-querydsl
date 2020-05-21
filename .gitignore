@@ -5,6 +5,8 @@ build/
 !**/src/main/**
 !**/src/test/**
 
+application-real.yml
+
 generated
 bin
 

@@ -2,6 +2,7 @@ package org.springframework.batch.item.querydsl.reader;
 
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import org.hibernate.jpa.QueryHints;
 import org.springframework.batch.item.database.AbstractPagingItemReader;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.util.ClassUtils;
@@ -72,6 +73,7 @@ public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
         EntityTransaction tx = getTxOrNull();
 
         JPAQuery<T> query = createQuery()
+                .setHint(QueryHints.HINT_READONLY, true)
                 .offset(getPage() * getPageSize())
                 .limit(getPageSize());
 
