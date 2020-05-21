@@ -2,6 +2,7 @@ package org.springframework.batch.item.querydsl.reader;
 
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import org.hibernate.FlushMode;
 import org.hibernate.jpa.QueryHints;
 import org.springframework.batch.item.database.AbstractPagingItemReader;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -11,6 +12,7 @@ import org.springframework.util.CollectionUtils;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
+import javax.persistence.FlushModeType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +75,8 @@ public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
         EntityTransaction tx = getTxOrNull();
 
         JPAQuery<T> query = createQuery()
-                .setHint(QueryHints.HINT_READONLY, true)
+//                .setHint(QueryHints.HINT_READONLY, true)
+//                .setHint(QueryHints.HINT_FLUSH_MODE, FlushMode.MANUAL)
                 .offset(getPage() * getPageSize())
                 .limit(getPageSize());
 
