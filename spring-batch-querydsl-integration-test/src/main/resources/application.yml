@@ -3,6 +3,9 @@ spring:
     include:
       - real
     active: local
+  datasource:
+    hikari:
+      auto-commit: false
   jpa:
     hibernate:
       ddl-auto: none

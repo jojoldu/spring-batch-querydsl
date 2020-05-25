@@ -48,5 +48,6 @@ logging:
   level:
     org:
       springframework:
-        batch: DEBUG
+        batch: 
+            item.querydsl.reader: DEBUG
 ```
