@@ -10,8 +10,8 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.database.JpaItemWriter;
 import org.springframework.batch.item.database.builder.JpaItemWriterBuilder;
-import org.springframework.batch.item.querydsl.integrationtest.entity.Product;
-import org.springframework.batch.item.querydsl.integrationtest.entity.ProductBackup;
+import org.springframework.batch.item.querydsl.integrationtest.entity.Manufacture;
+import org.springframework.batch.item.querydsl.integrationtest.entity.ManufactureBackup;
 import org.springframework.batch.item.querydsl.reader.QuerydslPagingItemReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -19,7 +19,8 @@ import org.springframework.context.annotation.Configuration;
 
 import javax.persistence.EntityManagerFactory;
 
-import static org.springframework.batch.item.querydsl.integrationtest.entity.QProduct.product;
+import static org.springframework.batch.item.querydsl.integrationtest.entity.QManufacture.manufacture;
+
 
 /**
  * Created by jojoldu@gmail.com on 06/10/2019
@@ -61,7 +62,7 @@ public class QuerydslPagingItemReaderConfiguration {
     @Bean
     public Step step() {
         return stepBuilderFactory.get("querydslPagingReaderStep")
-                .<Product, ProductBackup>chunk(chunkSize)
+                .<Manufacture, ManufactureBackup>chunk(chunkSize)
                 .reader(reader())
                 .processor(processor())
                 .writer(writer())
@@ -69,19 +70,19 @@ public class QuerydslPagingItemReaderConfiguration {
     }
 
     @Bean
-    public QuerydslPagingItemReader<Product> reader() {
+    public QuerydslPagingItemReader<Manufacture> reader() {
         return new QuerydslPagingItemReader<>(emf, chunkSize, queryFactory -> queryFactory
-                .selectFrom(product)
-                .where(product.createDate.eq(jobParameter.getTxDate())));
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(jobParameter.getTxDate())));
     }
 
-    private ItemProcessor<Product, ProductBackup> processor() {
-        return ProductBackup::new;
+    private ItemProcessor<Manufacture, ManufactureBackup> processor() {
+        return ManufactureBackup::new;
     }
 
     @Bean
-    public JpaItemWriter<ProductBackup> writer() {
-        return new JpaItemWriterBuilder<ProductBackup>()
+    public JpaItemWriter<ManufactureBackup> writer() {
+        return new JpaItemWriterBuilder<ManufactureBackup>()
                 .entityManagerFactory(emf)
                 .build();
     }

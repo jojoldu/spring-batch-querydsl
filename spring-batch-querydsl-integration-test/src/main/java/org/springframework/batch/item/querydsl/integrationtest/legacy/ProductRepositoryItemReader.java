@@ -1,6 +1,6 @@
 package org.springframework.batch.item.querydsl.integrationtest.legacy;
 
-import org.springframework.batch.item.querydsl.integrationtest.entity.Product;
+import org.springframework.batch.item.querydsl.integrationtest.entity.Manufacture;
 import org.springframework.batch.item.database.AbstractPagingItemReader;
 
 import java.time.LocalDate;
@@ -12,7 +12,7 @@ import java.util.List;
  * Blog : http://jojoldu.tistory.com
  * Github : http://github.com/jojoldu
  */
-public class ProductRepositoryItemReader extends AbstractPagingItemReader<Product> {
+public class ProductRepositoryItemReader extends AbstractPagingItemReader<Manufacture> {
     private final ProductBatchRepository productBatchRepository;
     private final LocalDate txDate;
 
@@ -33,7 +33,7 @@ public class ProductRepositoryItemReader extends AbstractPagingItemReader<Produc
             results.clear();
         }
 
-        List<Product> products = productBatchRepository.findPageByCreateDate(txDate, getPageSize(), getPage());
+        List<Manufacture> products = productBatchRepository.findPageByCreateDate(txDate, getPageSize(), getPage());
 
         results.addAll(products);
     }

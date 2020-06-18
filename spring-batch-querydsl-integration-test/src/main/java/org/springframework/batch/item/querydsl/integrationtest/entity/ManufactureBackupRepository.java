@@ -3,10 +3,9 @@ package org.springframework.batch.item.querydsl.integrationtest.entity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
- * Created by jojoldu@gmail.com on 20/08/2018
+ * Created by jojoldu@gmail.com on 20/01/2020
  * Blog : http://jojoldu.tistory.com
- * Github : https://github.com/jojoldu
+ * Github : http://github.com/jojoldu
  */
-
-public interface ProductRepository extends JpaRepository <Product, Long> {
+public interface ManufactureBackupRepository extends JpaRepository<ManufactureBackup, Long> {
 }

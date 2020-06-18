@@ -19,7 +19,7 @@ import java.time.LocalDate;
 @Getter
 @NoArgsConstructor
 @Entity
-public class Product {
+public class Manufacture {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,7 +31,7 @@ public class Product {
     private LocalDate createDate;
 
     @Builder
-    public Product(String name, long price, int categoryNo, LocalDate createDate) {
+    public Manufacture(String name, long price, int categoryNo, LocalDate createDate) {
         this.name = name;
         this.price = price;
         this.categoryNo = categoryNo;

@@ -1,7 +1,7 @@
 package org.springframework.batch.item.querydsl.integrationtest.job;
 
-import org.springframework.batch.item.querydsl.integrationtest.entity.Product;
-import org.springframework.batch.item.querydsl.integrationtest.entity.ProductBackup;
+import org.springframework.batch.item.querydsl.integrationtest.entity.Manufacture;
+import org.springframework.batch.item.querydsl.integrationtest.entity.ManufactureBackup;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -20,7 +20,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.persistence.EntityManagerFactory;
-import static org.springframework.batch.item.querydsl.integrationtest.entity.QProduct.product;
+
+import static org.springframework.batch.item.querydsl.integrationtest.entity.QManufacture.manufacture;
 
 /**
  * Created by jojoldu@gmail.com on 06/10/2019
@@ -62,7 +63,7 @@ public class QuerydslNoOffsetPagingItemReaderConfiguration {
     @Bean
     public Step step() {
         return stepBuilderFactory.get("querydslNoOffsetPagingReaderStep")
-                .<Product, ProductBackup>chunk(chunkSize)
+                .<Manufacture, ManufactureBackup>chunk(chunkSize)
                 .reader(reader())
                 .processor(processor())
                 .writer(writer())
@@ -70,24 +71,24 @@ public class QuerydslNoOffsetPagingItemReaderConfiguration {
     }
 
     @Bean
-    public QuerydslNoOffsetPagingItemReader<Product> reader() {
+    public QuerydslNoOffsetPagingItemReader<Manufacture> reader() {
         // 1. No Offset 옵션
-        QuerydslNoOffsetNumberOptions<Product, Long> options =
-                new QuerydslNoOffsetNumberOptions<>(product.id, Expression.ASC);
+        QuerydslNoOffsetNumberOptions<Manufacture, Long> options =
+                new QuerydslNoOffsetNumberOptions<>(manufacture.id, Expression.ASC);
 
         // 2. Querydsl
         return new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
-                .selectFrom(product)
-                .where(product.createDate.eq(jobParameter.getTxDate())));
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(jobParameter.getTxDate())));
     }
 
-    private ItemProcessor<Product, ProductBackup> processor() {
-        return ProductBackup::new;
+    private ItemProcessor<Manufacture, ManufactureBackup> processor() {
+        return ManufactureBackup::new;
     }
 
     @Bean
-    public JpaItemWriter<ProductBackup> writer() {
-        return new JpaItemWriterBuilder<ProductBackup>()
+    public JpaItemWriter<ManufactureBackup> writer() {
+        return new JpaItemWriterBuilder<ManufactureBackup>()
                 .entityManagerFactory(emf)
                 .build();
     }

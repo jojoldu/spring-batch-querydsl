@@ -4,7 +4,7 @@ import com.querydsl.core.types.dsl.NumberPath;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.batch.item.querydsl.integrationtest.TestBatchConfig;
-import org.springframework.batch.item.querydsl.integrationtest.entity.Product;
+import org.springframework.batch.item.querydsl.integrationtest.entity.Manufacture;
 import org.springframework.batch.item.querydsl.integrationtest.job.QuerydslNoOffsetPagingItemReaderConfiguration;
 import org.springframework.batch.item.querydsl.reader.expression.Expression;
 import org.springframework.batch.item.querydsl.reader.options.QuerydslNoOffsetNumberOptions;
@@ -12,7 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.batch.item.querydsl.integrationtest.entity.QProduct.product;
+import static org.springframework.batch.item.querydsl.integrationtest.entity.QManufacture.manufacture;
 
 /**
  * Created by jojoldu@gmail.com on 28/01/2020
@@ -27,10 +27,10 @@ public class QuerydslNoOffsetOptionsTest {
     public void path변수에서_필드명을_추출한다() throws Exception {
         //given
         String expected = "id";
-        NumberPath<Long> path = product.id;
+        NumberPath<Long> path = manufacture.id;
 
         //when
-        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(path,  Expression.ASC);
+        QuerydslNoOffsetNumberOptions<Manufacture, Long> options = new QuerydslNoOffsetNumberOptions<>(path,  Expression.ASC);
 
         //then
         assertThat(options.getFieldName()).isEqualTo(expected);

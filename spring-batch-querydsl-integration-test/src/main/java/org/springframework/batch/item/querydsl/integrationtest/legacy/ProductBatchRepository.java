@@ -1,6 +1,6 @@
 package org.springframework.batch.item.querydsl.integrationtest.legacy;
 
-import org.springframework.batch.item.querydsl.integrationtest.entity.Product;
+import org.springframework.batch.item.querydsl.integrationtest.entity.Manufacture;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.data.jpa.repository.support.QuerydslRepositorySupport;
 import org.springframework.stereotype.Repository;
@@ -8,7 +8,8 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
 
-import static org.springframework.batch.item.querydsl.integrationtest.entity.QProduct.product;
+import static org.springframework.batch.item.querydsl.integrationtest.entity.QManufacture.manufacture;
+
 
 /**
  * Created by jojoldu@gmail.com on 18/01/2020
@@ -21,14 +22,14 @@ public class ProductBatchRepository extends QuerydslRepositorySupport {
     private final JPAQueryFactory queryFactory;
 
     public ProductBatchRepository(JPAQueryFactory queryFactory) {
-        super(Product.class);
+        super(Manufacture.class);
         this.queryFactory = queryFactory;
     }
 
-    public List<Product> findPageByCreateDate(LocalDate txDate, int pageSize, long offset) {
+    public List<Manufacture> findPageByCreateDate(LocalDate txDate, int pageSize, long offset) {
         return queryFactory
-                .selectFrom(product)
-                .where(product.createDate.eq(txDate))
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate))
                 .limit(pageSize)
                 .offset(offset)
                 .fetch();

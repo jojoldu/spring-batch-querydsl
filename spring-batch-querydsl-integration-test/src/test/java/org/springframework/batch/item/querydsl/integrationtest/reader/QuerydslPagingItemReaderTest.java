@@ -5,8 +5,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.querydsl.integrationtest.TestBatchConfig;
-import org.springframework.batch.item.querydsl.integrationtest.entity.Product;
-import org.springframework.batch.item.querydsl.integrationtest.entity.ProductRepository;
+import org.springframework.batch.item.querydsl.integrationtest.entity.Manufacture;
+import org.springframework.batch.item.querydsl.integrationtest.entity.ManufactureRepository;
 import org.springframework.batch.item.querydsl.integrationtest.job.QuerydslPagingItemReaderConfiguration;
 import org.springframework.batch.item.querydsl.reader.QuerydslPagingItemReader;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +17,7 @@ import javax.persistence.EntityManagerFactory;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.batch.item.querydsl.integrationtest.entity.QProduct.product;
+import static org.springframework.batch.item.querydsl.integrationtest.entity.QManufacture.manufacture;
 
 /**
  * Created by jojoldu@gmail.com on 15/01/2020
@@ -29,7 +29,7 @@ import static org.springframework.batch.item.querydsl.integrationtest.entity.QPr
 public class QuerydslPagingItemReaderTest {
 
     @Autowired
-    private ProductRepository productRepository;
+    private ManufactureRepository productRepository;
 
     @Autowired
     private EntityManagerFactory emf;
@@ -47,21 +47,21 @@ public class QuerydslPagingItemReaderTest {
         int categoryNo = 1;
         int expected1 = 1000;
         int expected2 = 2000;
-        productRepository.save(new Product(name, expected1, categoryNo, txDate));
-        productRepository.save(new Product(name, expected2, categoryNo, txDate));
+        productRepository.save(new Manufacture(name, expected1, categoryNo, txDate));
+        productRepository.save(new Manufacture(name, expected2, categoryNo, txDate));
 
         int pageSize = 1;
 
-        QuerydslPagingItemReader<Product> reader = new QuerydslPagingItemReader<>(emf, pageSize, queryFactory -> queryFactory
-                .selectFrom(product)
-                .where(product.createDate.eq(txDate)));
+        QuerydslPagingItemReader<Manufacture> reader = new QuerydslPagingItemReader<>(emf, pageSize, queryFactory -> queryFactory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate)));
 
         reader.open(new ExecutionContext());
 
         //when
-        Product read1 = reader.read();
-        Product read2 = reader.read();
-        Product read3 = reader.read();
+        Manufacture read1 = reader.read();
+        Manufacture read2 = reader.read();
+        Manufacture read3 = reader.read();
 
         //then
         assertThat(read1.getPrice()).isEqualTo(expected1);
@@ -76,14 +76,14 @@ public class QuerydslPagingItemReaderTest {
 
         int pageSize = 1;
 
-        QuerydslPagingItemReader<Product> reader = new QuerydslPagingItemReader<>(emf, pageSize, queryFactory -> queryFactory
-                .selectFrom(product)
-                .where(product.createDate.eq(txDate)));
+        QuerydslPagingItemReader<Manufacture> reader = new QuerydslPagingItemReader<>(emf, pageSize, queryFactory -> queryFactory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate)));
 
         reader.open(new ExecutionContext());
 
         //when
-        Product read1 = reader.read();
+        Manufacture read1 = reader.read();
 
         //then
         assertThat(read1).isNull();

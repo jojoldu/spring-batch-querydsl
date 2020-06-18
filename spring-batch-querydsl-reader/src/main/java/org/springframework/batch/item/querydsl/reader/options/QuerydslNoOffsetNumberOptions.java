@@ -8,6 +8,7 @@ import com.querydsl.jpa.impl.JPAQuery;
 import org.springframework.batch.item.querydsl.reader.expression.Expression;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 
 public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> extends QuerydslNoOffsetOptions <T>{
 
@@ -24,9 +25,12 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
     @Override
     public void initFirstId(JPAQuery<T> query, int page) {
         if(page == 0) {
-            currentId = query
+            List<N> fetch = query
                     .select(selectFirstId())
-                    .fetchOne();
+                    .fetch();
+            int index = expression.isAsc()? 0: fetch.size()-1;
+
+            currentId = fetch.get(index);
 
             if (logger.isDebugEnabled()) {
                 logger.debug("First Select Key= " + currentId);

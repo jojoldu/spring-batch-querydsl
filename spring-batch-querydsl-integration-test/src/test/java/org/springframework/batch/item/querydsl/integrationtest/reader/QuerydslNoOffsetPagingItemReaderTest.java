@@ -10,8 +10,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.querydsl.integrationtest.TestBatchConfig;
-import org.springframework.batch.item.querydsl.integrationtest.entity.Product;
-import org.springframework.batch.item.querydsl.integrationtest.entity.ProductRepository;
+import org.springframework.batch.item.querydsl.integrationtest.entity.Manufacture;
+import org.springframework.batch.item.querydsl.integrationtest.entity.ManufactureRepository;
 import org.springframework.batch.item.querydsl.integrationtest.job.QuerydslNoOffsetPagingItemReaderConfiguration;
 import org.springframework.batch.item.querydsl.reader.QuerydslNoOffsetPagingItemReader;
 import org.springframework.batch.item.querydsl.reader.expression.Expression;
@@ -25,7 +25,7 @@ import javax.persistence.EntityManagerFactory;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.batch.item.querydsl.integrationtest.entity.QProduct.product;
+import static org.springframework.batch.item.querydsl.integrationtest.entity.QManufacture.manufacture;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = {TestBatchConfig.class, QuerydslNoOffsetPagingItemReaderConfiguration.class})
@@ -35,14 +35,14 @@ public class QuerydslNoOffsetPagingItemReaderTest {
     private JPAQueryFactory queryFactory;
 
     @Autowired
-    private ProductRepository productRepository;
+    private ManufactureRepository manufactureRepository;
 
     @Autowired
     private EntityManagerFactory emf;
 
     @After
     public void after() throws Exception {
-        productRepository.deleteAllInBatch();
+        manufactureRepository.deleteAllInBatch();
     }
 
     @Test
@@ -50,12 +50,12 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         //given
         LocalDate startDate = LocalDate.of(2020,1,11);
         LocalDate endDate = LocalDate.of(2020,1,11);
-        JPAQuery<Product> query = queryFactory
-                .selectFrom(product)
-                .where(product.createDate.between(startDate, endDate))
-                .orderBy(product.createDate.asc());
+        JPAQuery<Manufacture> query = queryFactory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.between(startDate, endDate))
+                .orderBy(manufacture.createDate.asc());
 
-        NumberPath<Long> id = product.id;
+        NumberPath<Long> id = manufacture.id;
         BooleanExpression where = id.gt(1);
         OrderSpecifier<Long> order = id.asc();
 
@@ -63,8 +63,8 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         query.where(where).orderBy(order);
 
         //then
-        assertThat(query.toString()).contains("product.id >");
-        assertThat(query.toString()).contains("product.id asc");
+        assertThat(query.toString()).contains("manufacture.id >");
+        assertThat(query.toString()).contains("manufacture.id asc");
     }
 
     @Test
@@ -72,18 +72,18 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         //given
         LocalDate startDate = LocalDate.of(2020,1,11);
         LocalDate endDate = LocalDate.of(2020,1,11);
-        JPAQuery<Product> query = queryFactory
-                .selectFrom(product)
-                .where(product.createDate.between(startDate, endDate))
-                .orderBy(product.createDate.asc());
+        JPAQuery<Manufacture> query = queryFactory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.between(startDate, endDate))
+                .orderBy(manufacture.createDate.asc());
 
-        NumberPath<Long> id = product.id;
+        NumberPath<Long> id = manufacture.id;
 
         //when
         query.select(id.max().add(1));
 
         //then
-        assertThat(query.toString()).contains("select max(product.id)");
+        assertThat(query.toString()).contains("select max(manufacture.id)");
     }
 
     @Test
@@ -94,23 +94,23 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         int categoryNo = 1;
         int expected1 = 1000;
         int expected2 = 2000;
-        productRepository.save(new Product(name, expected1, categoryNo, txDate));
-        productRepository.save(new Product(name, expected2, categoryNo, txDate));
+        manufactureRepository.save(new Manufacture(name, expected1, categoryNo, txDate));
+        manufactureRepository.save(new Manufacture(name, expected2, categoryNo, txDate));
 
-        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, Expression.ASC);
+        QuerydslNoOffsetNumberOptions<Manufacture, Long> options = new QuerydslNoOffsetNumberOptions<>(manufacture.id, Expression.ASC);
 
         int chunkSize = 1;
 
-        QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
-                        .selectFrom(product)
-                        .where(product.createDate.eq(txDate)));
+        QuerydslNoOffsetPagingItemReader<Manufacture> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                        .selectFrom(manufacture)
+                        .where(manufacture.createDate.eq(txDate)));
 
         reader.open(new ExecutionContext());
 
         //when
-        Product read1 = reader.read();
-        Product read2 = reader.read();
-        Product read3 = reader.read();
+        Manufacture read1 = reader.read();
+        Manufacture read2 = reader.read();
+        Manufacture read3 = reader.read();
 
         //then
         assertThat(read1.getPrice()).isEqualTo(expected1);
@@ -126,23 +126,23 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         int categoryNo = 1;
         int expected1 = 1000;
         int expected2 = 2000;
-        productRepository.save(new Product(name, expected1, categoryNo, txDate));
-        productRepository.save(new Product(name, expected2, categoryNo, txDate));
+        manufactureRepository.save(new Manufacture(name, expected1, categoryNo, txDate));
+        manufactureRepository.save(new Manufacture(name, expected2, categoryNo, txDate));
 
-        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, Expression.DESC);
+        QuerydslNoOffsetNumberOptions<Manufacture, Long> options = new QuerydslNoOffsetNumberOptions<>(manufacture.id, Expression.DESC);
 
         int chunkSize = 1;
 
-        QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
-                .selectFrom(product)
-                .where(product.createDate.eq(txDate)));
+        QuerydslNoOffsetPagingItemReader<Manufacture> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate)));
 
         reader.open(new ExecutionContext());
 
         //when
-        Product read1 = reader.read();
-        Product read2 = reader.read();
-        Product read3 = reader.read();
+        Manufacture read1 = reader.read();
+        Manufacture read2 = reader.read();
+        Manufacture read3 = reader.read();
 
         //then
         assertThat(read1.getPrice()).isEqualTo(expected2);
@@ -155,18 +155,18 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);
 
-        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, Expression.ASC);
+        QuerydslNoOffsetNumberOptions<Manufacture, Long> options = new QuerydslNoOffsetNumberOptions<>(manufacture.id, Expression.ASC);
 
         int chunkSize = 1;
 
-        QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
-                .selectFrom(product)
-                .where(product.createDate.eq(txDate)));
+        QuerydslNoOffsetPagingItemReader<Manufacture> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate)));
 
         reader.open(new ExecutionContext());
 
         //when
-        Product read1 = reader.read();
+        Manufacture read1 = reader.read();
 
         //then
         assertThat(read1).isNull();
@@ -181,25 +181,25 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         int expected1 = 1000;
         int expected2 = 2000;
         int expected3 = 3000;
-        productRepository.save(new Product(name, expected1, categoryNo, txDate));
-        productRepository.save(new Product(name, expected2, categoryNo, txDate));
-        productRepository.save(new Product(name, expected3, categoryNo, txDate));
+        manufactureRepository.save(new Manufacture(name, expected1, categoryNo, txDate));
+        manufactureRepository.save(new Manufacture(name, expected2, categoryNo, txDate));
+        manufactureRepository.save(new Manufacture(name, expected3, categoryNo, txDate));
 
-        QuerydslNoOffsetNumberOptions<Product, Long> options = new QuerydslNoOffsetNumberOptions<>(product.id, Expression.ASC);
+        QuerydslNoOffsetNumberOptions<Manufacture, Long> options = new QuerydslNoOffsetNumberOptions<>(manufacture.id, Expression.ASC);
 
         int chunkSize = 2;
 
-        QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
-                .selectFrom(product)
-                .where(product.createDate.eq(txDate)));
+        QuerydslNoOffsetPagingItemReader<Manufacture> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate)));
 
         reader.open(new ExecutionContext());
 
         //when
-        Product read1 = reader.read();
-        Product read2 = reader.read();
-        Product read3 = reader.read();
-        Product read4 = reader.read();
+        Manufacture read1 = reader.read();
+        Manufacture read2 = reader.read();
+        Manufacture read3 = reader.read();
+        Manufacture read4 = reader.read();
 
         //then
         assertThat(read1.getPrice()).isEqualTo(expected1);
@@ -216,23 +216,23 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         long price = 1000;
         String expected1 = "a";
         String expected2 = "b";
-        productRepository.save(new Product(expected1, price, categoryNo, txDate));
-        productRepository.save(new Product(expected2, price, categoryNo, txDate));
+        manufactureRepository.save(new Manufacture(expected1, price, categoryNo, txDate));
+        manufactureRepository.save(new Manufacture(expected2, price, categoryNo, txDate));
 
-        QuerydslNoOffsetStringOptions<Product> options = new QuerydslNoOffsetStringOptions<>(product.name, Expression.DESC);
+        QuerydslNoOffsetStringOptions<Manufacture> options = new QuerydslNoOffsetStringOptions<>(manufacture.name, Expression.DESC);
 
         int chunkSize = 1;
 
-        QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
-                .selectFrom(product)
-                .where(product.createDate.eq(txDate)));
+        QuerydslNoOffsetPagingItemReader<Manufacture> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate)));
 
         reader.open(new ExecutionContext());
 
         //when
-        Product read1 = reader.read();
-        Product read2 = reader.read();
-        Product read3 = reader.read();
+        Manufacture read1 = reader.read();
+        Manufacture read2 = reader.read();
+        Manufacture read3 = reader.read();
 
         //then
         assertThat(read1.getName()).isEqualTo(expected2);
@@ -248,23 +248,23 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         String name = "a";
         int expected1 = 1;
         int expected2 = 2;
-        productRepository.save(new Product(name, price, expected1, txDate));
-        productRepository.save(new Product(name, price, expected2, txDate));
+        manufactureRepository.save(new Manufacture(name, price, expected1, txDate));
+        manufactureRepository.save(new Manufacture(name, price, expected2, txDate));
 
-        QuerydslNoOffsetNumberOptions<Product, Integer> options = new QuerydslNoOffsetNumberOptions<>(product.categoryNo, Expression.DESC);
+        QuerydslNoOffsetNumberOptions<Manufacture, Integer> options = new QuerydslNoOffsetNumberOptions<>(manufacture.categoryNo, Expression.DESC);
 
         int chunkSize = 1;
 
-        QuerydslNoOffsetPagingItemReader<Product> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
-                .selectFrom(product)
-                .where(product.createDate.eq(txDate)));
+        QuerydslNoOffsetPagingItemReader<Manufacture> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate)));
 
         reader.open(new ExecutionContext());
 
         //when
-        Product read1 = reader.read();
-        Product read2 = reader.read();
-        Product read3 = reader.read();
+        Manufacture read1 = reader.read();
+        Manufacture read2 = reader.read();
+        Manufacture read3 = reader.read();
 
         //then
         assertThat(read1.getCategoryNo()).isEqualTo(expected2);

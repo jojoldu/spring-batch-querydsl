@@ -8,10 +8,10 @@ import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.item.querydsl.integrationtest.TestBatchConfig;
-import org.springframework.batch.item.querydsl.integrationtest.entity.Product;
-import org.springframework.batch.item.querydsl.integrationtest.entity.ProductBackup;
-import org.springframework.batch.item.querydsl.integrationtest.entity.ProductBackupRepository;
-import org.springframework.batch.item.querydsl.integrationtest.entity.ProductRepository;
+import org.springframework.batch.item.querydsl.integrationtest.entity.Manufacture;
+import org.springframework.batch.item.querydsl.integrationtest.entity.ManufactureBackup;
+import org.springframework.batch.item.querydsl.integrationtest.entity.ManufactureBackupRepository;
+import org.springframework.batch.item.querydsl.integrationtest.entity.ManufactureRepository;
 import org.springframework.batch.test.JobLauncherTestUtils;
 import org.springframework.batch.test.context.SpringBatchTest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,11 +37,12 @@ public class QuerydslNoOffsetPagingItemReaderConfigurationTest {
     public static final DateTimeFormatter FORMATTER = ofPattern("yyyy-MM-dd");
 
     @Autowired
-    private ProductRepository productRepository;
+    private ManufactureRepository productRepository;
 
     @Autowired
-    private ProductBackupRepository productBackupRepository;
+    private ManufactureBackupRepository productBackupRepository;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private JobLauncherTestUtils jobLauncherTestUtils;
 
@@ -59,8 +60,8 @@ public class QuerydslNoOffsetPagingItemReaderConfigurationTest {
         int categoryNo = 1;
         int expected1 = 1000;
         int expected2 = 2000;
-        productRepository.save(new Product(name, expected1, categoryNo, txDate));
-        productRepository.save(new Product(name, expected2, categoryNo, txDate));
+        productRepository.save(new Manufacture(name, expected1, categoryNo, txDate));
+        productRepository.save(new Manufacture(name, expected2, categoryNo, txDate));
 
         JobParameters jobParameters = new JobParametersBuilder()
                 .addString("txDate", txDate.format(FORMATTER))
@@ -71,7 +72,7 @@ public class QuerydslNoOffsetPagingItemReaderConfigurationTest {
 
         //then
         assertThat(jobExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
-        List<ProductBackup> backups = productBackupRepository.findAll();
+        List<ManufactureBackup> backups = productBackupRepository.findAll();
         assertThat(backups.size()).isEqualTo(2);
     }
 }
