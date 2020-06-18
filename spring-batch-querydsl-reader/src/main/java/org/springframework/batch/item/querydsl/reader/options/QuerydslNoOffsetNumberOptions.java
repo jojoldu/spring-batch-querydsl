@@ -28,9 +28,11 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
             List<N> fetch = query
                     .select(selectFirstId())
                     .fetch();
-            int index = expression.isAsc()? 0: fetch.size()-1;
-
-            currentId = fetch.get(index);
+            int size = fetch.size();
+            if(size > 0) {
+                int index = expression.isAsc()? 0: size-1;
+                currentId = fetch.get(index);
+            }
 
             if (logger.isDebugEnabled()) {
                 logger.debug("First Select Key= " + currentId);

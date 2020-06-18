@@ -271,4 +271,26 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         assertThat(read2.getCategoryNo()).isEqualTo(expected1);
         assertThat(read3).isNull();
     }
+
+    @Test
+    public void 조회결과가없어도_정상조회된다() throws Exception {
+        //given
+        LocalDate txDate = LocalDate.of(2020,10,12);
+
+        QuerydslNoOffsetNumberOptions<Manufacture, Integer> options = new QuerydslNoOffsetNumberOptions<>(manufacture.categoryNo, Expression.DESC);
+
+        int chunkSize = 1;
+
+        QuerydslNoOffsetPagingItemReader<Manufacture> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate)));
+
+        reader.open(new ExecutionContext());
+
+        //when
+        Manufacture read1 = reader.read();
+
+        //then
+        assertThat(read1).isNull();
+    }
 }
