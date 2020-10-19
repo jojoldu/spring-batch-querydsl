@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-	implementation project(":spring-batch-querydsl-reader")
+	implementation project(path: ":spring-batch-querydsl-reader", configuration: 'default')
 
 	implementation 'org.springframework.boot:spring-boot-starter-batch'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -39,7 +39,7 @@ configurations {
 def querydslSrcDir = 'src/main/generated'
 
 querydsl {
-	library = "com.querydsl:querydsl-apt"
+	library = "com.querydsl:querydsl-apt:4.3.1"
 	jpa = true
 	querydslSourcesDir = querydslSrcDir
 }
