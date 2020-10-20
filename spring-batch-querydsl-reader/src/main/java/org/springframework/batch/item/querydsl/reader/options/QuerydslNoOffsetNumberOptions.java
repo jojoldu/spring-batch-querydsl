@@ -2,13 +2,11 @@ package org.springframework.batch.item.querydsl.reader.options;
 
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.core.types.dsl.NumberPath;
 import com.querydsl.jpa.impl.JPAQuery;
 import org.springframework.batch.item.querydsl.reader.expression.Expression;
 
 import javax.annotation.Nonnull;
-import java.util.List;
 
 public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> extends QuerydslNoOffsetOptions <T>{
 
@@ -25,27 +23,15 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
     @Override
     public void initFirstId(JPAQuery<T> query, int page) {
         if(page == 0) {
-            List<N> fetch = query
-                    .select(selectFirstId())
-                    .fetch();
-            int size = fetch.size();
-            if(size > 0) {
-                int index = expression.isAsc()? 0: size-1;
-                currentId = fetch.get(index);
-            }
+            currentId = query
+                    .select(field)
+                    .orderBy(expression.isAsc()? field.asc() : field.desc())
+                    .fetchFirst();
 
             if (logger.isDebugEnabled()) {
                 logger.debug("First Select Key= " + currentId);
             }
         }
-    }
-
-    private NumberExpression<N> selectFirstId() {
-        if (expression.isAsc()) {
-            return field.min();
-        }
-
-        return field.max();
     }
 
     @Override

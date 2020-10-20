@@ -8,6 +8,7 @@ import org.springframework.batch.item.querydsl.reader.expression.Expression;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Field;
+import java.util.Optional;
 
 public abstract class QuerydslNoOffsetOptions<T> {
     protected Log logger = LogFactory.getLog(getClass());

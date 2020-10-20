@@ -1,5 +1,6 @@
 package org.springframework.batch.item.querydsl.reader;
 
+import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.util.ClassUtils;
@@ -36,7 +37,7 @@ public class QuerydslZeroPagingItemReader<T> extends QuerydslPagingItemReader<T>
 
         EntityTransaction tx = getTxOrNull();
 
-        JPAQuery<T> query = createQuery()
+        JPQLQuery<T> query = createQuery()
                 .offset(0)
                 .limit(getPageSize());
 

@@ -1,5 +1,6 @@
 package org.springframework.batch.item.querydsl.reader;
 
+import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.batch.item.querydsl.reader.options.QuerydslNoOffsetOptions;
@@ -34,7 +35,7 @@ public class QuerydslNoOffsetPagingItemReader<T> extends QuerydslPagingItemReade
 
         EntityTransaction tx = getTxOrNull();
 
-        JPAQuery<T> query = createQuery().limit(getPageSize());
+        JPQLQuery<T> query = createQuery().limit(getPageSize());
 
         initResults();
 

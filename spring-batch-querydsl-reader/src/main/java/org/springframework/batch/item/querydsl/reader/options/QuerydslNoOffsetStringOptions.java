@@ -2,15 +2,13 @@ package org.springframework.batch.item.querydsl.reader.options;
 
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.core.types.dsl.StringPath;
 import com.querydsl.jpa.impl.JPAQuery;
 import org.springframework.batch.item.querydsl.reader.expression.Expression;
 
 import javax.annotation.Nonnull;
-import java.util.List;
 
-public class QuerydslNoOffsetStringOptions<T> extends QuerydslNoOffsetOptions <T>{
+public class QuerydslNoOffsetStringOptions<T> extends QuerydslNoOffsetOptions<T> {
 
     private String currentId;
 
@@ -24,15 +22,11 @@ public class QuerydslNoOffsetStringOptions<T> extends QuerydslNoOffsetOptions <T
 
     @Override
     public void initFirstId(JPAQuery<T> query, int page) {
-        if(page == 0) {
-            List<String> fetch = query
-                    .select(selectFirstId())
-                    .fetch();
-            int size = fetch.size();
-            if(size > 0) {
-                int index = expression.isAsc()? 0: size-1;
-                currentId = fetch.get(index);
-            }
+        if (page == 0) {
+            currentId = query
+                    .select(field)
+                    .orderBy(expression.isAsc()? field.asc() : field.desc())
+                    .fetchFirst();
 
             if (logger.isDebugEnabled()) {
                 logger.debug("First Select Key= " + currentId);
@@ -40,17 +34,9 @@ public class QuerydslNoOffsetStringOptions<T> extends QuerydslNoOffsetOptions <T
         }
     }
 
-    private StringExpression selectFirstId() {
-        if (expression.isAsc()) {
-            return field.min();
-        }
-
-        return field.max();
-    }
-
     @Override
     public JPAQuery<T> createQuery(JPAQuery<T> query, int page) {
-        if(currentId == null) {
+        if (currentId == null) {
             return query;
         }
 
