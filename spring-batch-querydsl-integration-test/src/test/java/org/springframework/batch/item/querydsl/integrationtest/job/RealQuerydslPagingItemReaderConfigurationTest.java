@@ -1,6 +1,7 @@
 package org.springframework.batch.item.querydsl.integrationtest.job;
 
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.batch.core.BatchStatus;
@@ -35,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(classes = {TestBatchConfig.class, QuerydslPagingItemReaderConfiguration.class})
 @SpringBatchTest
 @ActiveProfiles(profiles = "real")
+@Ignore
 public class RealQuerydslPagingItemReaderConfigurationTest {
     public static final DateTimeFormatter FORMATTER = ofPattern("yyyy-MM-dd");
 
