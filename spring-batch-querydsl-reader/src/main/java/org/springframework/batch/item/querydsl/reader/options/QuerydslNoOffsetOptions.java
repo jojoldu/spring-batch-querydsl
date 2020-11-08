@@ -8,7 +8,6 @@ import org.springframework.batch.item.querydsl.reader.expression.Expression;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Field;
-import java.util.Optional;
 
 public abstract class QuerydslNoOffsetOptions<T> {
     protected Log logger = LogFactory.getLog(getClass());
@@ -31,7 +30,10 @@ public abstract class QuerydslNoOffsetOptions<T> {
         return fieldName;
     }
 
-    public abstract void initFirstId(JPAQuery<T> query, int page);
+    public abstract void initKeys(JPAQuery<T> query, int page);
+
+    protected abstract void initFirstId(JPAQuery<T> query);
+    protected abstract void initLastId(JPAQuery<T> query);
 
     public abstract JPAQuery<T> createQuery(JPAQuery<T> query, int page);
 

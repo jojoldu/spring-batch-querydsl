@@ -47,9 +47,10 @@ public class QuerydslNoOffsetPagingItemReader<T> extends QuerydslPagingItemReade
     @Override
     protected JPAQuery<T> createQuery() {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
-        options.initFirstId(queryFunction.apply(queryFactory), getPage()); // 제일 첫번째 페이징시 시작해야할 ID 찾기
+        JPAQuery<T> query = queryFunction.apply(queryFactory);
+        options.initKeys(query, getPage()); // 제일 첫번째 페이징시 시작해야할 ID 찾기
 
-        return options.createQuery(queryFunction.apply(queryFactory), getPage());
+        return options.createQuery(query, getPage());
     }
 
     private void resetCurrentIdIfNotLastPage() {

@@ -11,6 +11,7 @@ import javax.annotation.Nonnull;
 public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> extends QuerydslNoOffsetOptions <T>{
 
     private N currentId;
+    private N lastId;
 
     private final NumberPath<N> field;
 
@@ -20,18 +21,40 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
         this.field = field;
     }
 
+    public N getCurrentId() {
+        return currentId;
+    }
+
+    public N getLastId() {
+        return lastId;
+    }
+
     @Override
-    public void initFirstId(JPAQuery<T> query, int page) {
+    public void initKeys(JPAQuery<T> query, int page) {
         if(page == 0) {
-            currentId = query
-                    .select(field)
-                    .orderBy(expression.isAsc()? field.asc() : field.desc())
-                    .fetchFirst();
+            initFirstId(query);
+            initLastId(query);
 
             if (logger.isDebugEnabled()) {
-                logger.debug("First Select Key= " + currentId);
+                logger.debug("First Key= "+currentId+", Last Key= "+ lastId);
             }
         }
+    }
+
+    @Override
+    protected void initFirstId(JPAQuery<T> query) {
+        currentId = query.clone()
+                .select(field)
+                .orderBy(expression.isAsc()? field.asc() : field.desc())
+                .fetchFirst();
+    }
+
+    @Override
+    protected void initLastId(JPAQuery<T> query) {
+        lastId = query.clone()
+                .select(field)
+                .orderBy(expression.isAsc()? field.desc() : field.asc())
+                .fetchFirst();
     }
 
     @Override

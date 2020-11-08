@@ -29,14 +29,14 @@ import static org.springframework.batch.item.querydsl.integrationtest.entity.QMa
 public class QuerydslPagingItemReaderTest {
 
     @Autowired
-    private ManufactureRepository productRepository;
+    private ManufactureRepository manufactureRepository;
 
     @Autowired
     private EntityManagerFactory emf;
 
     @After
     public void tearDown() throws Exception {
-        productRepository.deleteAllInBatch();
+        manufactureRepository.deleteAllInBatch();
     }
 
     @Test
@@ -47,8 +47,8 @@ public class QuerydslPagingItemReaderTest {
         int categoryNo = 1;
         int expected1 = 1000;
         int expected2 = 2000;
-        productRepository.save(new Manufacture(name, expected1, categoryNo, txDate));
-        productRepository.save(new Manufacture(name, expected2, categoryNo, txDate));
+        manufactureRepository.save(new Manufacture(name, expected1, categoryNo, txDate));
+        manufactureRepository.save(new Manufacture(name, expected2, categoryNo, txDate));
 
         int pageSize = 1;
 
