@@ -107,6 +107,11 @@ public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
         }
     }
 
+    /**
+     * where 의 조건은 id max/min 을 이용한 제한된 범위를 가지게 한다
+     * @param query
+     * @param tx
+     */
     protected void fetchQuery(JPQLQuery<T> query, EntityTransaction tx) {
         if (transacted) {
             results.addAll(query.fetch());
