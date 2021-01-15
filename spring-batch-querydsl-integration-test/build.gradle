@@ -1,6 +1,4 @@
-plugins {
-	id 'com.ewerk.gradle.plugins.querydsl' version '1.0.10'
-}
+apply plugin: "io.spring.dependency-management"
 
 dependencies {
 	implementation project(path: ":spring-batch-querydsl-reader", configuration: 'default')
@@ -10,8 +8,11 @@ dependencies {
 	runtimeOnly 'com.h2database:h2'
 	implementation 'org.mariadb.jdbc:mariadb-java-client'
 
-	implementation 'com.querydsl:querydsl-jpa'
-	implementation 'com.querydsl:querydsl-apt'
+	implementation "com.querydsl:querydsl-jpa"
+	implementation "com.querydsl:querydsl-core"
+	annotationProcessor "com.querydsl:querydsl-apt:${dependencyManagement.importedProperties['querydsl.version']}:jpa" // querydsl JPAAnnotationProcessor 사용 지정
+	annotationProcessor "jakarta.persistence:jakarta.persistence-api:2.2.3"
+	annotationProcessor "jakarta.annotation:jakarta.annotation-api:1.3.5"
 
 	annotationProcessor 'org.projectlombok:lombok'
 	implementation 'org.projectlombok:lombok'
@@ -22,36 +23,16 @@ dependencies {
 	testImplementation 'org.springframework.batch:spring-batch-test'
 }
 
-configurations {
-	compileOnly {
-		extendsFrom annotationProcessor
-	}
-}
-
-configurations {
-	querydsl.extendsFrom compileClasspath
-	developmentOnly
-	runtimeClasspath {
-		extendsFrom developmentOnly
-	}
-}
-
-def querydslSrcDir = 'src/main/generated'
-
-querydsl {
-	library = "com.querydsl:querydsl-apt:4.3.1"
-	jpa = true
-	querydslSourcesDir = querydslSrcDir
-}
-
+// querydsl 적용
+def generated='src/main/generated'
 sourceSets {
-	main {
-		java {
-			srcDirs = ['src/main/java', querydslSrcDir]
-		}
-	}
+	main.java.srcDirs += [ generated ]
 }
 
-compileQuerydsl{
-	options.annotationProcessorPath = configurations.querydsl
+tasks.withType(JavaCompile) {
+	options.annotationProcessorGeneratedSourcesDirectory = file(generated)
+}
+
+clean.doLast {
+	file(generated).deleteDir()
 }

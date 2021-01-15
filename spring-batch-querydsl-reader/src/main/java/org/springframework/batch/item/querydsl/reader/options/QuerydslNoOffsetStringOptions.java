@@ -44,16 +44,14 @@ public class QuerydslNoOffsetStringOptions<T> extends QuerydslNoOffsetOptions<T>
     @Override
     protected void initFirstId(JPAQuery<T> query) {
         currentId = query.clone()
-                .select(field)
-                .orderBy(expression.isAsc()? field.asc() : field.desc())
+                .select(expression.isAsc()? field.min(): field.max())
                 .fetchFirst();
     }
 
     @Override
     protected void initLastId(JPAQuery<T> query) {
         lastId = query.clone()
-                .select(field)
-                .orderBy(expression.isAsc()? field.desc() : field.asc())
+                .select(expression.isAsc()? field.max(): field.min())
                 .fetchFirst();
     }
 

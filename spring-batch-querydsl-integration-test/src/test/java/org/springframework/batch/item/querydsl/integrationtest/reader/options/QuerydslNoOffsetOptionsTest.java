@@ -13,6 +13,7 @@ import org.springframework.batch.item.querydsl.integrationtest.entity.Manufactur
 import org.springframework.batch.item.querydsl.integrationtest.job.QuerydslNoOffsetPagingItemReaderConfiguration;
 import org.springframework.batch.item.querydsl.reader.expression.Expression;
 import org.springframework.batch.item.querydsl.reader.options.QuerydslNoOffsetNumberOptions;
+import org.springframework.batch.item.querydsl.reader.options.QuerydslNoOffsetStringOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -62,7 +63,7 @@ public class QuerydslNoOffsetOptionsTest {
     }
 
     @Test
-    public void firstId_lastId_저장된다() {
+    public void Number_firstId_lastId_저장된다() {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);
         String name = "a";
@@ -84,8 +85,34 @@ public class QuerydslNoOffsetOptionsTest {
         options.initKeys(apply, 0);
 
         // then
-        assertThat(options.getCurrentId()).isEqualTo(1L);
-        assertThat(options.getLastId()).isEqualTo(2L);
+        assertThat(options.getCurrentId() <options.getLastId()).isTrue();
+    }
+
+    @Test
+    public void String_firstId_lastId_저장된다() {
+        //given
+        LocalDate txDate = LocalDate.of(2020,10,12);
+        int categoryNo = 1;
+        long price = 1000;
+        String expected1 = "a";
+        String expected2 = "b";
+        manufactureRepository.save(new Manufacture(expected1, price, categoryNo, txDate));
+        manufactureRepository.save(new Manufacture(expected2, price, categoryNo, txDate));
+
+        QuerydslNoOffsetStringOptions<Manufacture> options =
+                new QuerydslNoOffsetStringOptions<>(manufacture.name, Expression.DESC);
+
+        Function<JPAQueryFactory, JPAQuery<Manufacture>> query = factory -> factory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate));
+        JPAQuery<Manufacture> apply = query.apply(queryFactory);
+
+        // when
+        options.initKeys(apply, 0);
+
+        // then
+        assertThat(options.getCurrentId()).isEqualTo(expected2);
+        assertThat(options.getLastId()).isEqualTo(expected1);
     }
 
 }
