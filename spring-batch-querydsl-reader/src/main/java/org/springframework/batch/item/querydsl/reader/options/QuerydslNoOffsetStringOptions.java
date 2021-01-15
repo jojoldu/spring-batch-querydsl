@@ -67,7 +67,8 @@ public class QuerydslNoOffsetStringOptions<T> extends QuerydslNoOffsetOptions<T>
     }
 
     private BooleanExpression whereExpression(int page) {
-        return expression.where(field, page, currentId);
+        return expression.where(field, page, currentId)
+                .and(expression.isAsc()? field.loe(lastId) : field.goe(lastId));
     }
 
     private OrderSpecifier<String> orderExpression() {

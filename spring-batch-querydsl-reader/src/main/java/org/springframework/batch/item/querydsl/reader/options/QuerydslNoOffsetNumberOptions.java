@@ -67,7 +67,8 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
     }
 
     private BooleanExpression whereExpression(int page) {
-        return expression.where(field, page, currentId);
+        return expression.where(field, page, currentId)
+                .and(expression.isAsc()? field.loe(lastId) : field.goe(lastId));
     }
 
     private OrderSpecifier<N> orderExpression() {

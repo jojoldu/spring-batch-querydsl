@@ -11,8 +11,8 @@ import com.querydsl.core.types.dsl.StringPath;
  */
 
 /**
- * 첫페이지 조회시에는 <=, >=
- * 두번째 페이지부터는 <, >
+ * 첫페이지 조회시에는 >=, <=
+ * 두번째 페이지부터는 >, <
  */
 public enum WhereExpression {
     GT(
