@@ -22,7 +22,7 @@ subprojects {
     apply plugin: 'io.spring.dependency-management'
 
     group = 'com.jojoldu'
-    version = '2.4.1'
+    version = '2.4.3'
     sourceCompatibility = '1.8'
     targetCompatibility = '1.8'
 
