@@ -16,6 +16,7 @@ import org.springframework.batch.test.JobLauncherTestUtils;
 import org.springframework.batch.test.context.SpringBatchTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.time.LocalDate;
@@ -33,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = {TestBatchConfig.class, QuerydslNoOffsetPagingItemReaderConfiguration.class})
 @SpringBatchTest
+@TestPropertySource(properties = "chunkSize=1")
 public class QuerydslNoOffsetPagingItemReaderConfigurationTest {
     public static final DateTimeFormatter FORMATTER = ofPattern("yyyy-MM-dd");
 
@@ -74,5 +76,7 @@ public class QuerydslNoOffsetPagingItemReaderConfigurationTest {
         assertThat(jobExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
         List<ManufactureBackup> backups = productBackupRepository.findAll();
         assertThat(backups.size()).isEqualTo(2);
+        assertThat(backups.get(0).getPrice()).isEqualTo(expected1);
+        assertThat(backups.get(1).getPrice()).isEqualTo(expected2);
     }
 }
