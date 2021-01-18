@@ -1,6 +1,5 @@
 package org.springframework.batch.item.querydsl.integrationtest.reader;
 
-import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
