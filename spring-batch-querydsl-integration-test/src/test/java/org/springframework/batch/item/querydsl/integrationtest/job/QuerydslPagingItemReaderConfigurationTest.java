@@ -1,6 +1,7 @@
 package org.springframework.batch.item.querydsl.integrationtest.job;
 
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.batch.core.BatchStatus;
@@ -45,6 +46,12 @@ public class QuerydslPagingItemReaderConfigurationTest {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private JobLauncherTestUtils jobLauncherTestUtils;
+
+    @Before
+    public void setUp() throws Exception {
+        productRepository.deleteAllInBatch();
+        productBackupRepository.deleteAllInBatch();
+    }
 
     @After
     public void after() throws Exception {
