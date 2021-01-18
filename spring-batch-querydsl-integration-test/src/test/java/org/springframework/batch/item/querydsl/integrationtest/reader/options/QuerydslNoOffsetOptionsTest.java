@@ -41,7 +41,7 @@ public class QuerydslNoOffsetOptionsTest {
 
     @After
     public void after() throws Exception {
-        manufactureRepository.deleteAll();
+        manufactureRepository.deleteAllInBatch();
     }
 
     @Test
