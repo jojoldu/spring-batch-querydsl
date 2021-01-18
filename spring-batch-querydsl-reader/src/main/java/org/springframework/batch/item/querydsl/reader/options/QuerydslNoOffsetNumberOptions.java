@@ -43,16 +43,37 @@ public class QuerydslNoOffsetNumberOptions<T, N extends Number & Comparable<?>> 
 
     @Override
     protected void initFirstId(JPAQuery<T> query) {
-        currentId = query.clone()
-                .select(expression.isAsc()? field.min(): field.max())
-                .fetchFirst();
+        JPAQuery<T> clone = query.clone();
+        boolean isGroupByQuery = isGroupByQuery(clone);
+
+        if(isGroupByQuery) {
+            currentId = clone
+                    .select(field)
+                    .orderBy(expression.isAsc()? field.asc() : field.desc())
+                    .fetchFirst();
+        } else {
+            currentId = clone
+                    .select(expression.isAsc()? field.min(): field.max())
+                    .fetchFirst();
+        }
+
     }
 
     @Override
     protected void initLastId(JPAQuery<T> query) {
-        lastId = query.clone()
-                .select(expression.isAsc()? field.max(): field.min())
-                .fetchFirst();
+        JPAQuery<T> clone = query.clone();
+        boolean isGroupByQuery = isGroupByQuery(clone);
+
+        if(isGroupByQuery) {
+            lastId = clone
+                    .select(field)
+                    .orderBy(expression.isAsc()? field.desc() : field.asc())
+                    .fetchFirst();
+        } else {
+            lastId = clone
+                    .select(expression.isAsc()? field.max(): field.min())
+                    .fetchFirst();
+        }
     }
 
     @Override

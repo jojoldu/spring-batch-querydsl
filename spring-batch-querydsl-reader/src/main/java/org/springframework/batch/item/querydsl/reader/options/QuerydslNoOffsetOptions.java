@@ -50,4 +50,13 @@ public abstract class QuerydslNoOffsetOptions<T> {
         }
     }
 
+    public boolean isGroupByQuery(JPAQuery<T> query) {
+        return isGroupByQuery(query.toString());
+    }
+
+    public boolean isGroupByQuery(String sql) {
+        return sql.contains("group by");
+
+    }
+
 }

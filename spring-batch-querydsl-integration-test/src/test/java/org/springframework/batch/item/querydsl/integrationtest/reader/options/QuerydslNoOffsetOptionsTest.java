@@ -39,11 +39,6 @@ public class QuerydslNoOffsetOptionsTest {
     @Autowired
     private ManufactureRepository manufactureRepository;
 
-    @Before
-    public void setUp() throws Exception {
-
-    }
-
     @After
     public void after() throws Exception {
         manufactureRepository.deleteAllInBatch();
@@ -115,4 +110,37 @@ public class QuerydslNoOffsetOptionsTest {
         assertThat(options.getLastId()).isEqualTo(expected1);
     }
 
+    @Test
+    public void groupBy절인지_확인_할수_있다() throws Exception {
+        //given
+        LocalDate txDate = LocalDate.of(2020,10,12);
+        QuerydslNoOffsetStringOptions<Manufacture> options =
+                new QuerydslNoOffsetStringOptions<>(manufacture.name, Expression.DESC);
+
+        Function<JPAQueryFactory, JPAQuery<Manufacture>> query = factory -> factory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate))
+                .groupBy(manufacture.name);
+
+        JPAQuery<Manufacture> apply = query.apply(queryFactory);
+
+        //when
+        boolean isGroupBy = options.isGroupByQuery(apply);
+
+        //then
+        assertThat(isGroupBy).isTrue();
+    }
+
+    @Test
+    public void group만_있으면_false() throws Exception {
+        //given
+        QuerydslNoOffsetStringOptions<Manufacture> options =
+                new QuerydslNoOffsetStringOptions<>(manufacture.name, Expression.DESC);
+
+        //when
+        boolean isGroupBy = options.isGroupByQuery("select group from class");
+
+        //then
+        assertThat(isGroupBy).isFalse();
+    }
 }
