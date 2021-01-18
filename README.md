@@ -12,7 +12,7 @@ Querydsl ItemReader For Spring Batch
 ### Dependency
 
 ```groovy
-compile('com.github.jojoldu.spring-batch-querydsl:spring-batch-querydsl-reader:2.4.3')
+compile('com.github.jojoldu.spring-batch-querydsl:spring-batch-querydsl-reader:2.4.4')
 ```
 
 ### QuerydslPagingItemReader
