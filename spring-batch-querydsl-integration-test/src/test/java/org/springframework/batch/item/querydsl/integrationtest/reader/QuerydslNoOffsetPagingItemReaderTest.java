@@ -209,6 +209,60 @@ public class QuerydslNoOffsetPagingItemReaderTest {
     }
 
     @Test
+    public void int필드도_nooffset이_적용된다() throws Exception {
+        //given
+        LocalDate txDate = LocalDate.of(2020,10,12);
+        long price = 1000;
+        String name = "a";
+        int expected1 = 1;
+        int expected2 = 2;
+        manufactureRepository.save(new Manufacture(name, price, expected1, txDate));
+        manufactureRepository.save(new Manufacture(name, price, expected2, txDate));
+
+        QuerydslNoOffsetNumberOptions<Manufacture, Integer> options = new QuerydslNoOffsetNumberOptions<>(manufacture.categoryNo, Expression.DESC);
+
+        int chunkSize = 1;
+
+        QuerydslNoOffsetPagingItemReader<Manufacture> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate)));
+
+        reader.open(new ExecutionContext());
+
+        //when
+        Manufacture read1 = reader.read();
+        Manufacture read2 = reader.read();
+        Manufacture read3 = reader.read();
+
+        //then
+        assertThat(read1.getCategoryNo()).isEqualTo(expected2);
+        assertThat(read2.getCategoryNo()).isEqualTo(expected1);
+        assertThat(read3).isNull();
+    }
+
+    @Test
+    public void 조회결과가없어도_정상조회된다() throws Exception {
+        //given
+        LocalDate txDate = LocalDate.of(2020,10,12);
+
+        QuerydslNoOffsetNumberOptions<Manufacture, Integer> options = new QuerydslNoOffsetNumberOptions<>(manufacture.categoryNo, Expression.DESC);
+
+        int chunkSize = 1;
+
+        QuerydslNoOffsetPagingItemReader<Manufacture> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate)));
+
+        reader.open(new ExecutionContext());
+
+        //when
+        Manufacture read1 = reader.read();
+
+        //then
+        assertThat(read1).isNull();
+    }
+
+    @Test
     public void 문자열필드_DESC_nooffset이_적용된다() throws Exception {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);
@@ -270,59 +324,5 @@ public class QuerydslNoOffsetPagingItemReaderTest {
         assertThat(read1.getName()).isEqualTo(expected1);
         assertThat(read2.getName()).isEqualTo(expected2);
         assertThat(read3).isNull();
-    }
-
-    @Test
-    public void int필드도_nooffset이_적용된다() throws Exception {
-        //given
-        LocalDate txDate = LocalDate.of(2020,10,12);
-        long price = 1000;
-        String name = "a";
-        int expected1 = 1;
-        int expected2 = 2;
-        manufactureRepository.save(new Manufacture(name, price, expected1, txDate));
-        manufactureRepository.save(new Manufacture(name, price, expected2, txDate));
-
-        QuerydslNoOffsetNumberOptions<Manufacture, Integer> options = new QuerydslNoOffsetNumberOptions<>(manufacture.categoryNo, Expression.DESC);
-
-        int chunkSize = 1;
-
-        QuerydslNoOffsetPagingItemReader<Manufacture> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
-                .selectFrom(manufacture)
-                .where(manufacture.createDate.eq(txDate)));
-
-        reader.open(new ExecutionContext());
-
-        //when
-        Manufacture read1 = reader.read();
-        Manufacture read2 = reader.read();
-        Manufacture read3 = reader.read();
-
-        //then
-        assertThat(read1.getCategoryNo()).isEqualTo(expected2);
-        assertThat(read2.getCategoryNo()).isEqualTo(expected1);
-        assertThat(read3).isNull();
-    }
-
-    @Test
-    public void 조회결과가없어도_정상조회된다() throws Exception {
-        //given
-        LocalDate txDate = LocalDate.of(2020,10,12);
-
-        QuerydslNoOffsetNumberOptions<Manufacture, Integer> options = new QuerydslNoOffsetNumberOptions<>(manufacture.categoryNo, Expression.DESC);
-
-        int chunkSize = 1;
-
-        QuerydslNoOffsetPagingItemReader<Manufacture> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
-                .selectFrom(manufacture)
-                .where(manufacture.createDate.eq(txDate)));
-
-        reader.open(new ExecutionContext());
-
-        //when
-        Manufacture read1 = reader.read();
-
-        //then
-        assertThat(read1).isNull();
     }
 }
