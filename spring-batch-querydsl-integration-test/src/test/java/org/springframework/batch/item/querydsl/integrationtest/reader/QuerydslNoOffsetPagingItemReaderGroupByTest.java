@@ -27,9 +27,6 @@ import static org.springframework.batch.item.querydsl.integrationtest.entity.QMa
 public class QuerydslNoOffsetPagingItemReaderGroupByTest {
 
     @Autowired
-    private JPAQueryFactory queryFactory;
-
-    @Autowired
     private ManufactureRepository manufactureRepository;
 
     @Autowired
