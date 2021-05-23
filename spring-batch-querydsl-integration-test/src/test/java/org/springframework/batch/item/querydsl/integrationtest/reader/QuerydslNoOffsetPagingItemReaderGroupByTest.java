@@ -5,11 +5,15 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.querydsl.integrationtest.TestBatchConfig;
+import org.springframework.batch.item.querydsl.integrationtest.entity.Foo;
+import org.springframework.batch.item.querydsl.integrationtest.entity.FooRepository;
 import org.springframework.batch.item.querydsl.integrationtest.entity.Manufacture;
 import org.springframework.batch.item.querydsl.integrationtest.entity.ManufactureRepository;
+import org.springframework.batch.item.querydsl.integrationtest.entity.QFoo;
 import org.springframework.batch.item.querydsl.integrationtest.job.QuerydslNoOffsetPagingItemReaderConfiguration;
 import org.springframework.batch.item.querydsl.reader.QuerydslNoOffsetPagingItemReader;
 import org.springframework.batch.item.querydsl.reader.expression.Expression;
+import org.springframework.batch.item.querydsl.reader.options.QuerydslNoOffsetNumberOptions;
 import org.springframework.batch.item.querydsl.reader.options.QuerydslNoOffsetStringOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,6 +23,7 @@ import javax.persistence.EntityManagerFactory;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.batch.item.querydsl.integrationtest.entity.QFoo.foo;
 import static org.springframework.batch.item.querydsl.integrationtest.entity.QManufacture.manufacture;
 
 @RunWith(SpringRunner.class)
@@ -27,6 +32,9 @@ public class QuerydslNoOffsetPagingItemReaderGroupByTest {
 
     @Autowired
     private ManufactureRepository manufactureRepository;
+
+    @Autowired
+    private FooRepository fooRepository;
 
     @Autowired
     private EntityManagerFactory emf;
@@ -102,5 +110,28 @@ public class QuerydslNoOffsetPagingItemReaderGroupByTest {
         assertThat(read1.getName()).isEqualTo(expected2);
         assertThat(read2.getName()).isEqualTo(expected1);
         assertThat(read3).isNull();
+    }
+
+    @Test
+    public void super_class의_필드_사용_가능하다() throws Exception {
+        //given
+        int chunkSize = 1;
+        final Long fooId = fooRepository.save(new Foo("foo1")).getId();
+
+        final QuerydslNoOffsetNumberOptions<Foo, Long> options = new QuerydslNoOffsetNumberOptions<>(foo.id, Expression.DESC);
+        final QuerydslNoOffsetPagingItemReader<Foo> reader = new QuerydslNoOffsetPagingItemReader<>(emf,
+            chunkSize,
+            options,
+            queryFactory -> queryFactory
+                .selectFrom(foo)
+                .where(foo.id.eq(fooId))
+        );
+        reader.open(new ExecutionContext());
+
+        //when
+        final Foo foo = reader.read();
+
+        //then
+        assertThat(foo.getId()).isEqualTo(fooId);
     }
 }
