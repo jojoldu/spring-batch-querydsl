@@ -1,5 +1,11 @@
 package org.springframework.batch.item.querydsl.integrationtest.reader;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.batch.item.querydsl.integrationtest.entity.QFoo.foo;
+import static org.springframework.batch.item.querydsl.integrationtest.entity.QManufacture.manufacture;
+
+import java.time.LocalDate;
+import javax.persistence.EntityManagerFactory;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -9,7 +15,6 @@ import org.springframework.batch.item.querydsl.integrationtest.entity.Foo;
 import org.springframework.batch.item.querydsl.integrationtest.entity.FooRepository;
 import org.springframework.batch.item.querydsl.integrationtest.entity.Manufacture;
 import org.springframework.batch.item.querydsl.integrationtest.entity.ManufactureRepository;
-import org.springframework.batch.item.querydsl.integrationtest.entity.QFoo;
 import org.springframework.batch.item.querydsl.integrationtest.job.QuerydslNoOffsetPagingItemReaderConfiguration;
 import org.springframework.batch.item.querydsl.reader.QuerydslNoOffsetPagingItemReader;
 import org.springframework.batch.item.querydsl.reader.expression.Expression;
@@ -18,13 +23,6 @@ import org.springframework.batch.item.querydsl.reader.options.QuerydslNoOffsetSt
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
-
-import javax.persistence.EntityManagerFactory;
-import java.time.LocalDate;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.batch.item.querydsl.integrationtest.entity.QFoo.foo;
-import static org.springframework.batch.item.querydsl.integrationtest.entity.QManufacture.manufacture;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = {TestBatchConfig.class, QuerydslNoOffsetPagingItemReaderConfiguration.class})
