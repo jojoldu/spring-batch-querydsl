@@ -40,6 +40,7 @@ public class QuerydslNoOffsetPagingItemReaderGroupByTest {
     @After
     public void after() throws Exception {
         manufactureRepository.deleteAllInBatch();
+        fooRepository.deleteAllInBatch();
     }
 
     @Test
