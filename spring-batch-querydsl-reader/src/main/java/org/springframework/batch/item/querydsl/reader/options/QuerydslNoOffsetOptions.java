@@ -41,7 +41,20 @@ public abstract class QuerydslNoOffsetOptions<T> {
 
     protected Object getFiledValue(T item) {
         try {
-            Field field = item.getClass().getDeclaredField(fieldName);
+            final Class<?> itemClass = item.getClass();
+            if (itemClass.getSuperclass() != null) {
+                final Class<?> superclass = itemClass.getSuperclass();
+                final Field[] superClassFields = superclass.getDeclaredFields();
+                for (Field field : superClassFields) {
+                    if (field.getName().equals(fieldName)) {
+                        field.setAccessible(true);
+                        superclass.getDeclaredField("id");
+                        return field.get(item);
+                    }
+                }
+            }
+
+            final Field field = itemClass.getDeclaredField("id");
             field.setAccessible(true);
             return field.get(item);
         } catch (NoSuchFieldException | IllegalAccessException e) {
