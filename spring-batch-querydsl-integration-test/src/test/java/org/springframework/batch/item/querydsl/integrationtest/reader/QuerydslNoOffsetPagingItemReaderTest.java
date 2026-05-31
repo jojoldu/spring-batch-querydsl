@@ -151,6 +151,40 @@ public class QuerydslNoOffsetPagingItemReaderTest {
     }
 
     @Test
+    public void keyExtractor로_키를_추출해_nooffset이_적용된다() throws Exception {
+        //given
+        LocalDate txDate = LocalDate.of(2020,10,12);
+        String name = "a";
+        int categoryNo = 1;
+        int expected1 = 1000;
+        int expected2 = 2000;
+        manufactureRepository.save(new Manufacture(name, expected1, categoryNo, txDate));
+        manufactureRepository.save(new Manufacture(name, expected2, categoryNo, txDate));
+
+        // 리플렉션 대신 명시적 keyExtractor 로 키를 추출한다
+        QuerydslNoOffsetNumberOptions<Manufacture, Long> options =
+                new QuerydslNoOffsetNumberOptions<>(manufacture.id, Expression.ASC, Manufacture::getId);
+
+        int chunkSize = 1;
+
+        QuerydslNoOffsetPagingItemReader<Manufacture> reader = new QuerydslNoOffsetPagingItemReader<>(emf, chunkSize, options, queryFactory -> queryFactory
+                .selectFrom(manufacture)
+                .where(manufacture.createDate.eq(txDate)));
+
+        reader.open(new ExecutionContext());
+
+        //when
+        Manufacture read1 = reader.read();
+        Manufacture read2 = reader.read();
+        Manufacture read3 = reader.read();
+
+        //then
+        assertThat(read1.getPrice()).isEqualTo(expected1);
+        assertThat(read2.getPrice()).isEqualTo(expected2);
+        assertThat(read3).isNull();
+    }
+
+    @Test
     public void 빈값일경우_null이_반환된다() throws Exception {
         //given
         LocalDate txDate = LocalDate.of(2020,10,12);
