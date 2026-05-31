@@ -3,6 +3,8 @@ package org.springframework.batch.item.querydsl.reader;
 import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.batch.item.database.AbstractPagingItemReader;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.util.ClassUtils;
@@ -17,13 +19,25 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
+/**
+ * Offset 기반 페이징 ItemReader. <br/>
+ * 내부적으로 {@code offset(page * pageSize)} 를 사용하므로 페이지 번호가 커질수록
+ * 앞 레코드를 모두 건너뛰어야 해서 성능이 저하된다(전체 인덱스 스캔과 유사). <br/>
+ * 따라서 대용량 데이터를 처리하는 배치라면 {@link QuerydslNoOffsetPagingItemReader}(keyset 방식) 사용을 권장한다. <br/>
+ * <br/>
+ * 또한 페이징은 항상 정렬 기준에 상대적이므로 queryFunction 에 안정적인 ORDER BY 를 포함해야 한다.
+ * ORDER BY 가 없으면 청크가 넘어갈 때 행이 중복 조회되거나 누락될 수 있다.
+ */
 public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
+
+    protected final Log logger = LogFactory.getLog(getClass());
 
     protected final Map<String, Object> jpaPropertyMap = new HashMap<>();
     protected EntityManagerFactory entityManagerFactory;
     protected EntityManager entityManager;
     protected Function<JPAQueryFactory, JPAQuery<T>> queryFunction;
     protected boolean transacted = true; // default value
+    private boolean orderByValidated = false;
 
     protected QuerydslPagingItemReader() {
         setName(ClassUtils.getShortName(QuerydslPagingItemReader.class));
@@ -76,9 +90,27 @@ public class QuerydslPagingItemReader<T> extends AbstractPagingItemReader<T> {
                 .offset(getPage() * getPageSize())
                 .limit(getPageSize());
 
+        warnIfNoOrderBy(query);
+
         initResults();
 
         fetchQuery(query, tx);
+    }
+
+    /**
+     * 페이징 쿼리에 ORDER BY 가 없으면 결과 순서가 실행 계획에 따라 달라져
+     * 청크 간 중복/누락이 발생할 수 있으므로 최초 1회 경고 로그를 남긴다.
+     */
+    private void warnIfNoOrderBy(JPQLQuery<T> query) {
+        if (orderByValidated) {
+            return;
+        }
+        orderByValidated = true;
+
+        if (!query.toString().toLowerCase().contains("order by")) {
+            logger.warn("페이징 쿼리에 ORDER BY 가 없습니다. offset 페이징은 정렬 기준이 없으면 "
+                    + "청크가 넘어갈 때 행이 중복 조회되거나 누락될 수 있습니다. queryFunction 에 안정적인 ORDER BY 를 추가하세요.");
+        }
     }
 
     protected EntityTransaction getTxOrNull() {
